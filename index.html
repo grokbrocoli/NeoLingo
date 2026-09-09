@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Minecraft NeoForge Academy</title>
+  <!-- Minecraft Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --mc-dark-bg: #121212;
+      --mc-panel-bg: #222222;
+      --mc-text-gold: #ffaa00;
+      --mc-text-white: #ffffff;
+      --mc-text-gray: #aaaaaa;
+      --mc-green: #58cc02;
+      --mc-red: #ff4b4b;
+      --bg-tint: transparent;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      border-radius: 0px !important;
+      image-rendering: pixelated;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--mc-dark-bg);
+      color: var(--mc-text-white);
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Screen Tint Overlay for Correct/Incorrect Feedback */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-tint);
+      pointer-events: none;
+      z-index: 99;
+      transition: background-color 0.3s ease;
+    }
+
+    /* === SIDEBAR / NAVIGATION === */
+    #sidebar {
+      width: 260px;
+      background-color: #161616;
+      border-right: 4px solid #000;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 15px;
+      z-index: 10;
+    }
+
+    .brand {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 13px;
+      color: var(--mc-text-gold);
+      text-shadow: 2px 2px #000;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .nav-item {
+      background-color: #707070;
+      border-top: 3px solid #adadad;
+      border-left: 3px solid #adadad;
+      border-right: 3px solid #2a2a2a;
+      border-bottom: 3px solid #2a2a2a;
+      outline: 2px solid #000;
+      padding: 12px;
+      color: var(--mc-text-white);
+      cursor: pointer;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #555;
+    }
+
+    .nav-item:hover { background-color: #8b8b8b; }
+
+    .nav-item.active {
+      border-top: 3px solid #2a2a2a;
+      border-left: 3px solid #2a2a2a;
+      border-right: 3px solid #adadad;
+      border-bottom: 3px solid #adadad;
+      color: var(--mc-text-gold);
+      background-color: #555555;
+    }
+
+    .reset-btn {
+      margin-top: auto;
+      background-color: #a82020;
+      color: #fff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      padding: 10px;
+      border-top: 3px solid #e55555;
+      border-left: 3px solid #e55555;
+      border-right: 3px solid #500000;
+      border-bottom: 3px solid #500000;
+      outline: 2px solid #000;
+      cursor: pointer;
+      text-align: center;
+      text-shadow: 1px 1px #000;
+    }
+
+    .reset-btn:hover { background-color: #c42828; }
+    .reset-btn:active {
+      border-top: 3px solid #500000;
+      border-left: 3px solid #500000;
+      border-right: 3px solid #e55555;
+      border-bottom: 3px solid #e55555;
+    }
+
+    /* === MAIN CONTENT AREA === */
+    #main-content {
+      flex: 1;
+      position: relative;
+      background: #1c1c1c;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 10px 100px 10px;
+    }
+
+    /* === DUOLINGO-STYLE PATH CONTAINER === */
+    .path-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 48px;
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      padding-top: 20px;
+    }
+
+    #path-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .node-wrapper {
+      position: relative;
+      width: 66px;
+      height: 66px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .node-wrapper.locked {
+      filter: grayscale(100%) opacity(0.4);
+      cursor: not-allowed;
+    }
+
+    .sprite-canvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      display: block;
+      filter: drop-shadow(2px 4px 0px #000);
+      transition: filter 0.1s;
+    }
+
+    .node-number {
+      position: absolute;
+      right: -28px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      color: #fff;
+      background-color: #000;
+      border: 2px solid #555;
+      padding: 4px 6px;
+      pointer-events: none;
+    }
+
+    /* Path Alignment S-Curve Offsets */
+    .offset-left-2 { transform: translateX(-80px); }
+    .offset-left-1 { transform: translateX(-40px); }
+    .offset-center { transform: translateX(0px); }
+    .offset-right-1 { transform: translateX(40px); }
+    .offset-right-2 { transform: translateX(80px); }
+
+    /* === BUBBLE POPUP === */
+    .popup-bubble {
+      position: absolute;
+      background-color: var(--mc-panel-bg);
+      border: 4px solid #000;
+      padding: 12px;
+      width: 200px;
+      text-align: center;
+      z-index: 20;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      top: -115px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .popup-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 12px 12px 0;
+      border-style: solid;
+      border-color: var(--mc-panel-bg) transparent;
+      display: block;
+      width: 0;
+    }
+
+    /* === CLASSIC MINECRAFT PIXEL BUTTON STYLES === */
+    .mc-btn-green {
+      background-color: #707070;
+      border-top: 4px solid #adadad;
+      border-left: 4px solid #adadad;
+      border-right: 4px solid #2a2a2a;
+      border-bottom: 4px solid #2a2a2a;
+      outline: 2px solid #000;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      padding: 12px 18px;
+      cursor: pointer;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #555;
+      transition: background-color 0.1s;
+    }
+
+    .mc-btn-green:hover {
+      background-color: #8b8b8b;
+    }
+
+    .mc-btn-green:active {
+      border-top: 4px solid #2a2a2a;
+      border-left: 4px solid #2a2a2a;
+      border-right: 4px solid #adadad;
+      border-bottom: 4px solid #adadad;
+      background-color: #555555;
+    }
+
+    .mc-btn-green.correct-btn {
+      background-color: #388e3c !important;
+      border-top: 4px solid #66bb6a !important;
+      border-left: 4px solid #66bb6a !important;
+      border-right: 4px solid #1b5e20 !important;
+      border-bottom: 4px solid #1b5e20 !important;
+    }
+
+    .mc-btn-green.wrong-btn {
+      background-color: #d32f2f !important;
+      border-top: 4px solid #ef5350 !important;
+      border-left: 4px solid #ef5350 !important;
+      border-right: 4px solid #b71c1c !important;
+      border-bottom: 4px solid #b71c1c !important;
+    }
+
+    /* HINT BUTTON SPECIFIC STYLE */
+    .mc-btn-hint {
+      background-color: #d89800;
+      border-top: 4px solid #ffcc00;
+      border-left: 4px solid #ffcc00;
+      border-right: 4px solid #885500;
+      border-bottom: 4px solid #885500;
+      outline: 2px solid #000;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      padding: 12px 18px;
+      cursor: pointer;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #ffaa00;
+      transition: background-color 0.1s;
+    }
+
+    .mc-btn-hint:hover {
+      background-color: #e6a817;
+    }
+
+    .mc-btn-hint:active {
+      border-top: 4px solid #885500;
+      border-left: 4px solid #885500;
+      border-right: 4px solid #ffcc00;
+      border-bottom: 4px solid #ffcc00;
+      background-color: #b07800;
+    }
+
+    /* SHOW ANSWER BUTTON SPECIFIC STYLE */
+    .mc-btn-show-answer {
+      background-color: #1a5fb4;
+      border-top: 4px solid #3584e4;
+      border-left: 4px solid #3584e4;
+      border-right: 4px solid #0f3b73;
+      border-bottom: 4px solid #0f3b73;
+      outline: 2px solid #000;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      padding: 12px 18px;
+      cursor: pointer;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #3584e4;
+      transition: background-color 0.1s;
+    }
+
+    .mc-btn-show-answer:hover {
+      background-color: #2570cc;
+    }
+
+    .mc-btn-show-answer:active {
+      border-top: 4px solid #0f3b73;
+      border-left: 4px solid #0f3b73;
+      border-right: 4px solid #3584e4;
+      border-bottom: 4px solid #3584e4;
+      background-color: #124a8f;
+    }
+
+    /* ANSWER REVEAL TEXT */
+    #answer-reveal {
+      display: none;
+      text-align: center;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: var(--mc-text-gold);
+      background-color: #2b2200;
+      border: 3px solid var(--mc-text-gold);
+      padding: 10px 16px;
+      max-width: 650px;
+      margin: 10px auto 0 auto;
+      width: 100%;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* CORRECT OPTION HIGHLIGHT WHEN REVEALED */
+    .option-card.correct-reveal {
+      border-top: 3px solid #66bb6a !important;
+      border-left: 3px solid #66bb6a !important;
+      border-right: 3px solid #1b5e20 !important;
+      border-bottom: 3px solid #1b5e20 !important;
+      background-color: #1b3a1b !important;
+      color: #a5d6a7 !important;
+    }
+
+    /* === LESSON OVERLAY MODAL === */
+    #lesson-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: var(--mc-dark-bg);
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 25px;
+      z-index: 100;
+      overflow-y: auto;
+    }
+
+    .lesson-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      max-width: 700px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 18px;
+      background-color: #000;
+      border: 3px solid #444;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--mc-green);
+      transition: width 0.3s ease;
+    }
+
+    .close-btn {
+      font-family: 'Press Start 2P', cursive;
+      color: var(--mc-text-gray);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .lesson-body {
+      max-width: 650px;
+      margin: 20px auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* HINT BOX CONTAINER */
+    .hint-box {
+      background-color: #2b2200;
+      border: 3px solid var(--mc-text-gold);
+      padding: 12px 16px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: #ffe082;
+      display: none;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+      line-height: 1.4;
+    }
+
+    .hint-box code {
+      background-color: #000;
+      color: #ffaa00;
+      padding: 2px 6px;
+      border: 1px solid #555;
+    }
+
+    /* --- DYNAMIC EXERCISE TYPE STYLES --- */
+    .card-prompt {
+      background-color: var(--mc-panel-bg);
+      border: 3px solid #444;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .card-icon {
+      font-size: 50px;
+    }
+
+    .text-input-field {
+      width: 100%;
+      background: #000;
+      border: 3px solid #555;
+      color: #fff;
+      font-family: 'VT323', monospace;
+      font-size: 24px;
+      padding: 10px;
+      outline: none;
+    }
+
+    .answer-line-area {
+      min-height: 60px;
+      border-bottom: 3px solid #555;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 0;
+      align-items: center;
+    }
+
+    .word-bank-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
+      min-height: 50px;
+    }
+
+    /* Static Pre-filled Blocks in Guided Mode */
+    .static-chip {
+      background-color: #2a2a2a;
+      border: 2px solid #555;
+      padding: 8px 14px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: #aaa;
+    }
+
+    /* === CHIP / WORD BANK BUTTON STYLES & BLUE SELECTION STATE === */
+    .chip-btn {
+      background-color: #3c3c3c;
+      border-top: 3px solid #666;
+      border-left: 3px solid #666;
+      border-right: 3px solid #111;
+      border-bottom: 3px solid #111;
+      outline: 2px solid #000;
+      padding: 8px 14px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      cursor: pointer;
+      color: #fff;
+      text-shadow: 1px 1px #000;
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.15s, border-color 0.15s;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Blue body styling when moved to answer line */
+    .chip-btn.selected-blue {
+      background-color: #1a5fb4;
+      border-top: 3px solid #666;
+      border-left: 3px solid #3584e4;
+      border-right: 3px solid #0f3b73;
+      border-bottom: 3px solid #0f3b73;
+    }
+
+    .chip-btn:active {
+      border-top: 3px solid #111;
+      border-left: 3px solid #111;
+      border-right: 3px solid #666;
+      border-bottom: 3px solid #666;
+    }
+
+    .chip-placeholder {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Multiple Choice Grid */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .option-card {
+      background-color: #3c3c3c;
+      border-top: 3px solid #666;
+      border-left: 3px solid #666;
+      border-right: 3px solid #111;
+      border-bottom: 3px solid #111;
+      outline: 2px solid #000;
+      padding: 14px;
+      cursor: pointer;
+      font-size: 22px;
+      color: #fff;
+      text-shadow: 1px 1px #000;
+    }
+
+    .option-card:hover {
+      background-color: #4a4a4a;
+    }
+
+    .option-card.selected {
+      border-top: 3px solid #ffaa00;
+      border-left: 3px solid #ffaa00;
+      border-right: 3px solid #885500;
+      border-bottom: 3px solid #885500;
+      background-color: #2a2200;
+      color: var(--mc-text-gold);
+    }
+
+    .lesson-footer {
+      max-width: 700px;
+      margin: 0 auto;
+      width: 100%;
+      border-top: 3px solid var(--mc-panel-bg);
+      padding-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* === RESPONSIVE MOBILE ADJUSTMENTS === */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      #sidebar {
+        width: 100%;
+        height: auto;
+        padding: 10px 15px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        border-right: none;
+        border-bottom: 4px solid #000;
+      }
+      .brand { margin-bottom: 0; font-size: 11px; }
+      .nav-item { display: none; }
+      .reset-btn { margin-top: 0; padding: 6px 10px; font-size: 8px; }
+      .path-container { max-width: 100%; }
+      .offset-left-2 { transform: translateX(-50px); }
+      .offset-left-1 { transform: translateX(-25px); }
+      .offset-right-1 { transform: translateX(25px); }
+      .offset-right-2 { transform: translateX(50px); }
+      #lesson-modal { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR NAVIGATION -->
+  <div id="sidebar">
+    <div class="brand">NEOFORGE<br>ACADEMY</div>
+    <div class="nav-item active">⛏️ Learn Java</div>
+    <div class="reset-btn" onclick="resetProgress()">RESET</div>
+  </div>
+
+  <!-- MAIN LEARNING PATH VIEW -->
+  <div id="main-content">
+    <h2 style="font-family: 'Press Start 2P'; color: var(--mc-text-gold); text-shadow: 2px 2px #000; margin-bottom: 20px; text-align:center; font-size: 16px;">
+      CHAPTER 1: NEOFORGE BASICS
+    </h2>
+
+    <div class="path-container" id="path-container">
+      <svg id="path-svg"></svg>
+    </div>
+  </div>
+
+  <!-- LESSON OVERLAY -->
+  <div id="lesson-modal">
+    <div class="lesson-header">
+      <span class="close-btn" onclick="closeLesson()">✕</span>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="lesson-progress"></div>
+      </div>
+    </div>
+
+    <div class="lesson-body" id="exercise-body">
+      <!-- Dynamic Question Content Injected Here -->
+    </div>
+
+    <div id="answer-reveal"></div>
+
+    <div class="lesson-footer">
+      <button class="mc-btn-hint" id="hint-btn" onclick="toggleHint()">💡 HINT</button>
+      <button class="mc-btn-show-answer" id="show-answer-btn" style="display:none;" onclick="showAnswer()">👁 SHOW ANSWER</button>
+      <div id="feedback-msg"></div>
+      <button class="mc-btn-green" id="action-btn" onclick="checkAnswer()">CHECK</button>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. DEFAULT SPRITE (STARBUTTON) ---
+    const STARBUTTON_PALETTE = {
+        0: "transparent", 1: "#101010", 2: "#585860", 3: "#484848", 4: "#404030",
+        5: "#383838", 6: "#303828", 7: "#a0d010", 8: "#90b818", 9: "#88a828",
+        10: "#607820", 11: "#587018", 12: "#506018", 13: "#505058", 14: "#404040",
+        15: "#383828", 16: "#282830"
+    };
+
+    const STARBUTTON_PIXELS = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,2,3,3,3,3,3,3,3,3,4,3,3,3,3,3,3,3,3,3,2,1],
+        [1,3,5,5,5,5,5,5,5,6,7,6,5,5,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,5,6,8,7,6,5,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,6,7,8,7,6,5,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,6,8,9,8,7,6,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,6,8,9,8,7,6,5,5,5,5,5,5,3,1],
+        [1,3,5,6,6,6,6,6,7,9,9,9,8,7,6,6,6,6,6,5,3,1],
+        [1,3,6,7,7,7,7,7,8,9,9,9,9,8,7,7,7,7,7,6,3,1],
+        [1,3,6,10,9,9,8,8,9,9,9,9,9,9,8,8,9,9,10,6,3,1],
+        [1,3,5,6,11,12,9,9,9,9,9,9,9,9,9,9,12,11,6,5,3,1],
+        [1,3,5,5,6,6,12,9,9,9,9,9,9,9,9,12,6,6,5,5,3,1],
+        [1,3,5,5,5,6,9,9,9,9,9,9,9,9,9,9,6,5,5,5,3,1],
+        [1,3,5,5,5,6,9,9,9,9,9,9,9,9,9,9,6,5,5,5,3,1],
+        [1,3,5,5,6,9,9,9,9,12,12,12,12,9,9,9,9,6,5,5,3,1],
+        [1,3,5,6,9,9,9,9,12,6,6,6,6,12,9,9,9,9,6,5,3,1],
+        [1,3,6,10,10,11,11,12,6,5,5,5,5,6,12,11,11,10,10,6,3,1],
+        [1,13,14,15,15,15,15,15,14,14,14,14,14,14,15,15,15,15,15,14,13,1],
+        [1,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,1],
+        [1,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    // --- 2. HOVER SPRITE (STARBUTTONHOVER) ---
+    const STARBUTTONHOVER_PALETTE = {
+        0: "transparent", 1: "#204050", 2: "#203848", 3: "#183040", 4: "#586068",
+        5: "#405058", 6: "#384840", 7: "#384040", 8: "#304038", 9: "#98d020",
+        10: "#88b820", 11: "#80a830", 12: "#587838", 13: "#507030", 14: "#486830",
+        15: "#505860", 16: "#384850", 17: "#304030", 18: "#185068", 19: "#182838",
+        20: "#182028"
+    };
+
+    const STARBUTTONHOVER_PIXELS = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+        [3,4,5,5,5,5,5,5,5,5,6,5,5,5,5,5,5,5,5,5,4,3],
+        [3,5,7,7,7,7,7,7,7,8,9,8,7,7,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,7,8,10,9,8,7,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,8,9,10,9,8,7,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,8,10,11,10,9,8,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,8,10,11,10,9,8,7,7,7,7,7,7,5,3],
+        [3,5,7,8,8,8,8,8,9,11,11,11,10,9,8,8,8,8,8,7,5,3],
+        [3,5,8,9,9,9,9,9,10,11,11,11,11,10,9,9,9,9,9,8,5,3],
+        [3,5,8,12,11,11,10,10,11,11,11,11,11,11,10,10,11,11,12,8,5,3],
+        [3,5,7,8,13,14,11,11,11,11,11,11,11,11,11,11,14,13,8,7,5,3],
+        [3,5,7,7,8,8,14,11,11,11,11,11,11,11,11,14,8,8,7,7,5,3],
+        [3,5,7,7,7,8,11,11,11,11,11,11,11,11,11,11,8,7,7,7,5,3],
+        [3,5,7,7,7,8,11,11,11,11,11,11,11,11,11,11,8,7,7,7,5,3],
+        [3,5,7,7,8,11,11,11,11,14,14,14,14,11,11,11,11,8,7,7,5,3],
+        [3,5,7,8,11,11,11,11,14,8,8,8,8,14,11,11,11,11,8,7,5,3],
+        [3,5,8,12,12,13,13,14,8,7,7,7,7,8,14,13,13,12,12,8,5,3],
+        [3,15,16,17,17,17,17,17,16,16,16,16,16,16,17,17,17,17,17,16,15,3],
+        [3,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,3],
+        [3,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,3],
+        [19,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,19]
+    ];
+
+    // --- 3. CLICKED SPRITE (STARBUTTONCLICK) ---
+    const STARBUTTONCLICK_PALETTE = {
+        0: "transparent", 1: "#204050", 2: "#203848", 3: "#183040", 4: "#182828",
+        5: "#586068", 6: "#405058", 7: "#384840", 8: "#384040", 9: "#304038",
+        10: "#98d020", 11: "#88b820", 12: "#80a830", 13: "#587838", 14: "#507030",
+        15: "#486830", 16: "#505860", 17: "#384850", 18: "#304030", 19: "#185068",
+        20: "#182838", 21: "#182028"
+    };
+
+    const STARBUTTONCLICK_PIXELS = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+        [3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3],
+        [3,5,6,6,6,6,6,6,6,6,7,6,6,6,6,6,6,6,6,6,5,3],
+        [3,6,8,8,8,8,8,8,8,9,10,9,8,8,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,8,9,11,10,9,8,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,9,10,11,10,9,8,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,9,11,12,11,10,9,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,9,11,12,11,10,9,8,8,8,8,8,8,6,3],
+        [3,6,8,9,9,9,9,9,10,12,12,12,11,10,9,9,9,9,9,8,6,3],
+        [3,6,9,10,10,10,10,10,11,12,12,12,12,11,10,10,10,10,10,9,6,3],
+        [3,6,9,13,12,12,11,11,12,12,12,12,12,12,11,11,12,12,13,9,6,3],
+        [3,6,8,9,14,15,12,12,12,12,12,12,12,12,12,12,15,14,9,8,6,3],
+        [3,6,8,8,9,9,15,12,12,12,12,12,12,12,12,15,9,9,8,8,6,3],
+        [3,6,8,8,8,9,12,12,12,12,12,12,12,12,12,12,9,8,8,8,6,3],
+        [3,6,8,8,8,9,12,12,12,12,12,12,12,12,12,12,9,8,8,8,6,3],
+        [3,6,8,8,9,12,12,12,12,15,15,15,15,12,12,12,12,9,8,8,6,3],
+        [3,6,8,9,12,12,12,12,15,9,9,9,9,15,12,12,12,12,9,8,6,3],
+        [3,6,9,13,13,14,14,15,9,8,8,8,8,9,15,14,13,13,9,6,3],
+        [3,16,17,18,18,18,18,18,17,17,17,17,17,17,18,18,18,18,18,17,16,3],
+        [3,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,3],
+        [20,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,20]
+    ];
+
+    function drawSprite(canvas, state) {
+      let palette = STARBUTTON_PALETTE;
+      let pixels = STARBUTTON_PIXELS;
+
+      if (state === 'hover') {
+        palette = STARBUTTONHOVER_PALETTE;
+        pixels = STARBUTTONHOVER_PIXELS;
+      } else if (state === 'clicked') {
+        palette = STARBUTTONCLICK_PALETTE;
+        pixels = STARBUTTONCLICK_PIXELS;
+      }
+
+      const rows = pixels.length;
+      const cols = pixels[0].length;
+      canvas.width = cols;
+      canvas.height = rows;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, cols, rows);
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const colorKey = pixels[y][x];
+          const color = palette[colorKey];
+          if (color && color !== "transparent") {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    // --- CURRICULUM DATA WITH CODE STRUCTURE HINTS ---
+    const LESSON_CURRICULUM = [
+      // Lesson 1: Guided Intro (~2 slots to fill, ~5 choices in bank)
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 1: Item Registry', 
+          desc: 'Fill in the 2 missing pieces to create the Item Registry', 
+          prefilled: ['public', 'static', 'final'], 
+          missingWords: ['DeferredItem', '='], 
+          distractors: ['private', 'void', 'int'],
+          hint: 'Structure: [access] [static] [final] <code>[Type]</code> [name] <code>[assignment]</code> [value];'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 1: Main Method Header', 
+          desc: 'Fill in the 2 missing keywords for the main method', 
+          prefilled: ['public', 'static', 'void'], 
+          missingWords: ['main', '(String[] args)'], 
+          distractors: ['run', 'class', 'System'],
+          hint: 'Structure: [access] [modifier] [return_type] <code>[method_name]</code> <code>([parameter_list])</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 1: Mod Annotation', 
+          desc: 'Complete the main mod class annotation', 
+          prefilled: [], 
+          missingWords: ['@Mod', '("mymodid")'], 
+          distractors: ['@Register', '@Event', 'public'],
+          hint: 'Structure: <code>@[AnnotationName]</code> <code>("[mod_id_string]")</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 1: Quick ID Check', 
+          icon: '💎', 
+          desc: 'What string registers a unique item ID?', 
+          chips: ['"ruby"', '"stone"', '"diamond"'], 
+          answer: '"ruby"',
+          hint: 'Structure: Standard Java String literal with quotes e.g. <code>"[id_name]"</code>'
+        }
+      ],
+      // Lesson 2: Guided Block Properties (~2 slots to fill, ~5 choices)
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 2: Block Properties', 
+          desc: 'Complete the Block properties builder call', 
+          prefilled: ['BlockBehaviour', '.Properties'], 
+          missingWords: ['.of()', '.destroyTime(2.0f)'], 
+          distractors: ['.hardness()', '.create()', 'new'],
+          hint: 'Structure: [Class].[SubClass] <code>.[factory_method]()</code> <code>.[property_setter]([value])</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 2: Variable Declaration', 
+          desc: 'Fill in the missing parts to set stack size to 64', 
+          prefilled: ['int', 'stackSize'], 
+          missingWords: ['=', '64', ';'], 
+          distractors: ['128', '=='],
+          hint: 'Structure: [dataType] [variableName] <code>[assignment_operator]</code> <code>[literal_value]</code> <code>[end_statement]</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 2: Event Listener', 
+          desc: 'Finish the Event Listener signature', 
+          prefilled: ['@SubscribeEvent', 'public', 'void'], 
+          missingWords: ['onServerStarting', '(ServerStartingEvent event)'], 
+          distractors: ['onTick', 'boolean', 'private'],
+          hint: 'Structure: [@Annotation] [access] [return] <code>[handlerName]</code> <code>([EventType] [eventVar])</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 2: Durability Check', 
+          icon: '⚔️', 
+          desc: 'Select the standard durability value for diamond tier', 
+          chips: ['1561', '250', '59'], 
+          answer: '1561',
+          hint: 'Structure: Raw integer literal e.g. <code>1561</code>'
+        }
+      ],
+      // Lesson 3: Intermediate Guidance
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 3: Item Instantiation', 
+          desc: 'Finish creating the new Item instance', 
+          prefilled: ['new', 'Item'], 
+          missingWords: ['(new', 'Item.Properties()', ')'], 
+          distractors: ['ItemBuilder', 'create()', 'null'],
+          hint: 'Structure: new [Class] <code>([constructor_argument])</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 3: Registry Supplier', 
+          desc: 'Fill in the register function parameters', 
+          prefilled: ['ITEMS', '.register'], 
+          missingWords: ['("ruby"', ',', 'RUBY_SWORD)'], 
+          distractors: ['("item")', 'new', 'null'],
+          hint: 'Structure: [Registry].register <code>("[registry_name]"</code> <code>,</code> <code>[Supplier_Object])</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 3: Creative Check', 
+          desc: 'Complete the boolean check for creative mode', 
+          prefilled: ['if'], 
+          missingWords: ['(player', '.isCreative()', ')'], 
+          distractors: ['(isCreative)', 'while', 'else'],
+          hint: 'Structure: if <code>([object]</code> <code>.[booleanMethod]())</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 3: Hardness Method', 
+          icon: '🧱', 
+          desc: 'Select the method name to set block hardness', 
+          chips: ['destroyTime', 'hardness', 'strength'], 
+          answer: 'destroyTime',
+          hint: 'Structure: BlockBehaviour.Properties method name e.g. <code>destroyTime</code>'
+        }
+      ],
+      // Lesson 4: Practice Mode
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 4: Item Registry (Unassisted)', 
+          desc: 'Assemble the entire Item Registry statement from scratch', 
+          prefilled: [], 
+          missingWords: ['public', 'static', 'final', 'DeferredItem', 'ITEM', '='], 
+          distractors: ['private', 'transient', 'void'],
+          hint: 'Structure: <code>[access] [modifiers] [Type] [Identifier] [Operator]</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 4: Block Properties (Unassisted)', 
+          desc: 'Assemble the Block properties builder from scratch', 
+          prefilled: [], 
+          missingWords: ['BlockBehaviour', '.Properties', '.of()', '.destroyTime(2.0f)'], 
+          distractors: ['BlockInit', '.hardness()', 'create()'],
+          hint: 'Structure: <code>[OuterClass].[InnerClass].[factory Method]().[chainedSetter]()</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 4: Main Mod Annotation', 
+          icon: '🧪', 
+          desc: 'Specify the annotation used for mod main classes', 
+          chips: ['@Mod', '@Event', '@Register'], 
+          answer: '@Mod',
+          hint: 'Structure: Class-level marker annotation e.g. <code>@Mod</code>'
+        },
+        { 
+          type: 'mc', 
+          title: 'Lesson 4: Registry Class Selection', 
+          desc: 'Which class manages item registration in modern NeoForge?', 
+          options: ['DeferredRegister', 'GameRegistry', 'ItemRegister'], 
+          correct: 0,
+          hint: 'Structure: Generic deferred helper pattern class name e.g. <code>DeferredRegister&lt;T&gt;</code>'
+        }
+      ],
+      // Lesson 5: Advanced Setup
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 5: Event Listener (Unassisted)', 
+          desc: 'Assemble the complete Event Listener header', 
+          prefilled: [], 
+          missingWords: ['@SubscribeEvent', 'public', 'void', 'onServerStarting', '(ServerStartingEvent event)'], 
+          distractors: ['@EventHandler', 'private', 'static'],
+          hint: 'Structure: <code>[@Annotation] [access] [return] [methodName] ([ParamType] [paramName])</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 5: Item Instantiation (Unassisted)', 
+          desc: 'Assemble the full item instantiation line', 
+          prefilled: [], 
+          missingWords: ['new', 'Item', '(new', 'Item.Properties()', ')'], 
+          distractors: ['create', 'ItemBuilder', 'of()'],
+          hint: 'Structure: <code>new [Class](new [PropertiesClass]())</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 5: Package Identification', 
+          icon: '🔥', 
+          desc: 'What package contains NeoForge event handlers?', 
+          chips: ['net.neoforged.bus', 'java.util', 'minecraft.event'], 
+          answer: 'net.neoforged.bus',
+          hint: 'Structure: Dot-separated Java package identifier e.g. <code>net.neoforged.bus</code>'
+        },
+        { 
+          type: 'mc', 
+          title: 'Lesson 5: Event Bus Identification', 
+          desc: 'Which bus listens for mod loading lifecycle events?', 
+          options: ['MOD Bus', 'FORGE Bus', 'GAME Bus'], 
+          correct: 0,
+          hint: 'Structure: Bus scope type for initialization e.g. <code>MOD Bus</code>'
+        }
+      ],
+      // Lesson 6: Complex Constructs
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 6: Registry Supplier (Unassisted)', 
+          desc: 'Assemble the item registration call without guidance', 
+          prefilled: [], 
+          missingWords: ['ITEMS', '.register', '("ruby"', ',', 'RUBY_SWORD)'], 
+          distractors: ['ITEMS_LIST', '.add', '("ruby")'],
+          hint: 'Structure: <code>[RegistryObject].[method]("[name]", [Supplier])</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 6: ItemStack Creation', 
+          desc: 'Assemble an ItemStack creation statement for diamonds', 
+          prefilled: [], 
+          missingWords: ['ItemStack', 'stack', '=', 'new', 'ItemStack(Items.DIAMOND)'], 
+          distractors: ['ItemHolder', '.of()', 'Diamonds'],
+          hint: 'Structure: <code>[Type] [var] = new [Type]([ItemInstance])</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 6: Metadata File', 
+          icon: '📜', 
+          desc: 'Which file stores mod metadata in NeoForge?', 
+          chips: ['neoforge.mods.toml', 'pack.mcmeta', 'plugin.yml'], 
+          answer: 'neoforge.mods.toml',
+          hint: 'Structure: TOML configuration filename e.g. <code>neoforge.mods.toml</code>'
+        },
+        { 
+          type: 'mc', 
+          title: 'Lesson 6: Right Click Trigger', 
+          desc: 'Which method triggers when right-clicking an item in air?', 
+          options: ['use()', 'onItemRightClick()', 'interact()'], 
+          correct: 0,
+          hint: 'Structure: Modern Mojang mapping method name e.g. <code>use()</code>'
+        }
+      ],
+      // Lesson 7: Higher Level Integration
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 7: Creative Tab Registration', 
+          desc: 'Assemble a creative mode tab registration call', 
+          prefilled: [], 
+          missingWords: ['CREATIVE_MODE_TABS', '.register', '("example_tab")'], 
+          distractors: ['TABS', '.append', 'Tab.class'],
+          hint: 'Structure: <code>[DeferredRegister].[method]("[tab_id]")</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 7: Main Method Review', 
+          desc: 'Assemble the standard Java main method header from memory', 
+          prefilled: [], 
+          missingWords: ['public', 'static', 'void', 'main', '(String[] args)'], 
+          distractors: ['private', 'class', 'implements'],
+          hint: 'Structure: <code>[access] [static] [return] [name] ([ArrayType] [identifier])</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 7: Armor Slot Specifier', 
+          icon: '🛡️', 
+          desc: 'Specify the armor slot type for head armor', 
+          chips: ['ArmorItem.Type.HELMET', 'HEAD', 'SLOT_0'], 
+          answer: 'ArmorItem.Type.HELMET',
+          hint: 'Structure: Enum property access e.g. <code>EnumClass.Type.MEMBER</code>'
+        },
+        { 
+          type: 'mc', 
+          title: 'Lesson 7: Explosion Resistance', 
+          desc: 'How do you define block resistance against explosions?', 
+          options: ['explosionResistance()', 'blast()', 'setHardness()'], 
+          correct: 0,
+          hint: 'Structure: Block properties builder chain method e.g. <code>explosionResistance()</code>'
+        }
+      ],
+      // Lesson 8: Final Challenge
+      [
+        { 
+          type: 'builder', 
+          title: 'Lesson 8: Full Registry Challenge', 
+          desc: 'Assemble the Item Registry statement with multiple distractors', 
+          prefilled: [], 
+          missingWords: ['public', 'static', 'final', 'DeferredItem', 'ITEM', '='], 
+          distractors: ['private', 'transient', 'void'],
+          hint: 'Structure: <code>[access] [modifiers] [GenericType] [VarName] [Assignment]</code>'
+        },
+        { 
+          type: 'builder', 
+          title: 'Lesson 8: Full Block Challenge', 
+          desc: 'Assemble the Block properties statement with multiple distractors', 
+          prefilled: [], 
+          missingWords: ['BlockBehaviour', '.Properties', '.of()', '.destroyTime(2.0f)'], 
+          distractors: ['BlockInit', '.create()', '.hardness()'],
+          hint: 'Structure: <code>[ParentClass].[NestedClass].[staticFactory]().[chainedSetter]()</code>'
+        },
+        { 
+          type: 'card_input', 
+          title: 'Lesson 8: Entity Data Object', 
+          icon: '⚡', 
+          desc: 'What parameter object holds player entity data?', 
+          chips: ['Player', 'EntityPlayer', 'ServerPlayer'], 
+          answer: 'Player',
+          hint: 'Structure: Standard Mojang mapped class name e.g. <code>Player</code>'
+        },
+        { 
+          type: 'mc', 
+          title: 'Lesson 8: Creative Tab Additions', 
+          desc: 'Which class wraps creative tab item additions?', 
+          options: ['BuildCreativeModeTabContentsEvent', 'CreativeTabEvent', 'ItemTabRegister'], 
+          correct: 0,
+          hint: 'Structure: Event class name e.g. <code>BuildCreativeModeTabContentsEvent</code>'
+        }
+      ]
+    ];
+
+    // --- CHAPTER/LESSON STRUCTURE ---
+    const lessonsData = [
+      { id: 1, title: "Lesson 1: Registry Keys (Guided)", offsetClass: "offset-center" },
+      { id: 2, title: "Lesson 2: Custom Items (Guided)", offsetClass: "offset-right-1" },
+      { id: 3, title: "Lesson 3: Event Listeners (Guided)", offsetClass: "offset-right-2" },
+      { id: 4, title: "Lesson 4: Block Properties (Practice)", offsetClass: "offset-right-1" },
+      { id: 5, title: "Lesson 5: Main Mod Class (Practice)", offsetClass: "offset-center" },
+      { id: 6, title: "Lesson 6: Creative Tabs (Advanced)", offsetClass: "offset-left-1" },
+      { id: 7, title: "Lesson 7: Item Properties (Advanced)", offsetClass: "offset-left-2" },
+      { id: 8, title: "Lesson 8: Crafting Recipes (Mastery)", offsetClass: "offset-left-1" }
+    ];
+
+    // USER SAVED PROGRESS SYSTEM
+    let userData = {
+      unlockedLesson: 0
+    };
+
+    function loadUserData() {
+      const saved = localStorage.getItem('neoforge_academy_user_v4');
+      if (saved) {
+        userData = JSON.parse(saved);
+      } else {
+        saveUserData();
+      }
+    }
+
+    function saveUserData() {
+      localStorage.setItem('neoforge_academy_user_v4', JSON.stringify(userData));
+    }
+
+    function resetProgress() {
+      userData = { unlockedLesson: 0 };
+      saveUserData();
+      renderPath();
+    }
+
+    // STATE VARIABLES
+    let selectedLessonIndex = null;
+    let activeLessonIndex = null; // tracks the lesson currently being played, unaffected by bubble-close clicks
+    let activeSessionQuestions = [];
+    let currentQuestionIndex = 0;
+    let userBuilderAnswer = [];
+    let selectedMcOption = null;
+
+    // RENDER PATH NODES WITH ONE-BY-ONE UNLOCK SYSTEM
+    const pathContainer = document.getElementById('path-container');
+
+    function renderPath() {
+      pathContainer.querySelectorAll('.node-wrapper').forEach(n => n.remove());
+      
+      let bubble = document.getElementById('popup-bubble');
+      if (!bubble) {
+        bubble = document.createElement('div');
+        bubble.className = 'popup-bubble';
+        bubble.id = 'popup-bubble';
+        bubble.innerHTML = `
+          <div id="bubble-title" style="color:var(--mc-text-gold); font-family:'Press Start 2P'; font-size:10px;">Lesson</div>
+          <button class="mc-btn-green" id="bubble-start-btn" onclick="startLesson()">START</button>
+        `;
+        pathContainer.appendChild(bubble);
+      }
+
+      lessonsData.forEach((lesson, idx) => {
+        const wrapper = document.createElement('div');
+        const isUnlocked = idx <= userData.unlockedLesson;
+        
+        wrapper.className = `node-wrapper ${lesson.offsetClass} ${isUnlocked ? '' : 'locked'}`;
+        wrapper.id = `node-${idx}`;
+        
+        const canvas = document.createElement('canvas');
+        canvas.className = 'sprite-canvas';
+        
+        const numBadge = document.createElement('div');
+        numBadge.className = 'node-number';
+        numBadge.innerText = idx + 1;
+        wrapper.appendChild(numBadge);
+
+        drawSprite(canvas, 'default');
+        
+        if (isUnlocked) {
+          wrapper.onmouseenter = () => { if (selectedLessonIndex !== idx) drawSprite(canvas, 'hover'); };
+          wrapper.onmouseleave = () => { if (selectedLessonIndex !== idx) drawSprite(canvas, 'default'); };
+          wrapper.onclick = (e) => {
+            e.stopPropagation();
+            showBubble(wrapper, canvas, idx);
+          };
+        }
+
+        wrapper.appendChild(canvas);
+        pathContainer.appendChild(wrapper);
+      });
+
+      setTimeout(drawConnectingLines, 50);
+    }
+
+    // SVG CONNECTING LINES
+    function drawConnectingLines() {
+      const svg = document.getElementById('path-svg');
+      svg.innerHTML = '';
+
+      for (let i = 0; i < lessonsData.length - 1; i++) {
+        const nodeA = document.getElementById(`node-${i}`);
+        const nodeB = document.getElementById(`node-${i + 1}`);
+
+        if (nodeA && nodeB) {
+          const rectA = nodeA.getBoundingClientRect();
+          const rectB = nodeB.getBoundingClientRect();
+          const containerRect = pathContainer.getBoundingClientRect();
+
+          const x1 = (rectA.left + rectA.width / 2) - containerRect.left;
+          const y1 = (rectA.top + rectA.height / 2) - containerRect.top;
+          const x2 = (rectB.left + rectB.width / 2) - containerRect.left;
+          const y2 = (rectB.top + rectB.height / 2) - containerRect.top;
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', x1);
+          line.setAttribute('y1', y1);
+          line.setAttribute('x2', x2);
+          line.setAttribute('y2', y2);
+          line.setAttribute('stroke-width', '6');
+          line.setAttribute('stroke-dasharray', '6, 6');
+          line.setAttribute('stroke', i < userData.unlockedLesson ? '#58cc02' : '#444444');
+
+          svg.appendChild(line);
+        }
+      }
+    }
+
+    window.addEventListener('resize', drawConnectingLines);
+
+    function showBubble(nodeElement, canvasElement, index) {
+      selectedLessonIndex = index;
+      const bubble = document.getElementById('popup-bubble');
+      
+      document.querySelectorAll('.sprite-canvas').forEach(c => drawSprite(c, 'default'));
+      drawSprite(canvasElement, 'clicked');
+      
+      nodeElement.appendChild(bubble);
+      document.getElementById('bubble-title').innerText = lessonsData[index].title;
+      bubble.style.display = 'flex';
+    }
+
+    document.addEventListener('click', () => {
+      const bubble = document.getElementById('popup-bubble');
+      if (bubble) bubble.style.display = 'none';
+      selectedLessonIndex = null;
+      document.querySelectorAll('.sprite-canvas').forEach(c => drawSprite(c, 'default'));
+    });
+
+    // --- LESSON ENGINE ---
+    function startLesson() {
+      const lessonIdx = selectedLessonIndex !== null ? selectedLessonIndex : 0;
+      activeLessonIndex = lessonIdx;
+      activeSessionQuestions = [...LESSON_CURRICULUM[lessonIdx]];
+      currentQuestionIndex = 0;
+      
+      document.getElementById('lesson-modal').style.display = 'flex';
+      renderQuestion();
+    }
+
+    function closeLesson() {
+      document.getElementById('lesson-modal').style.display = 'none';
+      activeLessonIndex = null;
+      resetFeedbackUI();
+    }
+
+    function toggleHint() {
+      const hintBox = document.getElementById('question-hint-box');
+      if (hintBox) {
+        if (hintBox.style.display === 'none' || hintBox.style.display === '') {
+          hintBox.style.display = 'block';
+        } else {
+          hintBox.style.display = 'none';
+        }
+      }
+    }
+
+    function moveChipWithAnimation(chip, targetContainer, isReturning, placeholder) {
+      const firstRect = chip.getBoundingClientRect();
+
+      if (isReturning) {
+        chip.classList.remove('selected-blue');
+        targetContainer.insertBefore(chip, placeholder);
+        placeholder.remove();
+      } else {
+        chip.classList.add('selected-blue');
+        targetContainer.appendChild(chip);
+      }
+
+      const lastRect = chip.getBoundingClientRect();
+
+      const deltaX = firstRect.left - lastRect.left;
+      const deltaY = firstRect.top - lastRect.top;
+
+      chip.style.transition = 'none';
+      chip.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+      requestAnimationFrame(() => {
+        chip.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.15s, border-color 0.15s';
+        chip.style.transform = 'translate(0, 0)';
+      });
+    }
+
+    function renderQuestion() {
+      resetFeedbackUI();
+      
+      const progressPercent = (currentQuestionIndex / activeSessionQuestions.length) * 100;
+      document.getElementById('lesson-progress').style.width = `${progressPercent}%`;
+
+      const q = activeSessionQuestions[currentQuestionIndex];
+      const body = document.getElementById('exercise-body');
+      body.innerHTML = '';
+
+      const title = document.createElement('h3');
+      title.style.color = 'var(--mc-text-gold)';
+      title.style.fontSize = '24px';
+      title.style.margin = '0';
+      title.innerText = q.title;
+
+      const desc = document.createElement('p');
+      desc.style.fontSize = '20px';
+      desc.style.margin = '0 0 10px 0';
+      desc.innerText = q.desc;
+
+      body.appendChild(title);
+      body.appendChild(desc);
+
+      // STRUCTURE HINT BOX INJECTION
+      if (q.hint) {
+        const hintBox = document.createElement('div');
+        hintBox.className = 'hint-box';
+        hintBox.id = 'question-hint-box';
+        hintBox.innerHTML = `<strong>STRUCTURE:</strong> ${q.hint}`;
+        body.appendChild(hintBox);
+      }
+
+      // EXERCISE TYPE 1: WORD BANK BUILDER (WITH PREFILLED GUIDANCE FOR EARLY LESSONS)
+      if (q.type === 'builder') {
+        userBuilderAnswer = [];
+        
+        const answerLine = document.createElement('div');
+        answerLine.className = 'answer-line-area';
+        answerLine.id = 'answer-line';
+
+        // Add prefilled static code blocks if provided in guided mode
+        if (q.prefilled && q.prefilled.length > 0) {
+          q.prefilled.forEach(pfWord => {
+            const staticChip = document.createElement('div');
+            staticChip.className = 'static-chip';
+            staticChip.innerText = pfWord;
+            answerLine.appendChild(staticChip);
+          });
+        }
+
+        const bankArea = document.createElement('div');
+        bankArea.className = 'word-bank-area';
+
+        // Combine missing words to place and distractor choices (~5 total in bank)
+        const bankChoices = [...q.missingWords, ...(q.distractors || [])];
+        const shuffledChoices = bankChoices.sort(() => 0.5 - Math.random());
+
+        shuffledChoices.forEach((word) => {
+          const chip = document.createElement('div');
+          chip.className = 'chip-btn';
+          chip.innerText = word;
+          chip.dataset.word = word;
+          
+          chip.onclick = () => {
+            if (chip.parentNode === bankArea) {
+              const placeholder = document.createElement('div');
+              placeholder.className = 'chip-btn chip-placeholder';
+              placeholder.innerText = word;
+              bankArea.insertBefore(placeholder, chip);
+              chip._placeholder = placeholder;
+
+              userBuilderAnswer.push(chip);
+              moveChipWithAnimation(chip, answerLine, false, null);
+            } else {
+              const idx = userBuilderAnswer.indexOf(chip);
+              if (idx !== -1) userBuilderAnswer.splice(idx, 1);
+              
+              moveChipWithAnimation(chip, bankArea, true, chip._placeholder);
+            }
+          };
+          bankArea.appendChild(chip);
+        });
+
+        body.appendChild(answerLine);
+        body.appendChild(bankArea);
+      }
+      
+      // EXERCISE TYPE 2: CARD + TEXT INPUT
+      else if (q.type === 'card_input') {
+        const card = document.createElement('div');
+        card.className = 'card-prompt';
+        card.innerHTML = `<div class="card-icon">${q.icon}</div>`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'text-input-field';
+        input.id = 'card-text-input';
+        input.placeholder = 'Type code or parameter...';
+
+        const chipsContainer = document.createElement('div');
+        chipsContainer.className = 'word-bank-area';
+
+        q.chips.forEach(chipText => {
+          const chip = document.createElement('div');
+          chip.className = 'chip-btn';
+          chip.innerText = chipText;
+          chip.onclick = () => { input.value = chipText; };
+          chipsContainer.appendChild(chip);
+        });
+
+        card.appendChild(input);
+        body.appendChild(card);
+        body.appendChild(chipsContainer);
+      }
+
+      // EXERCISE TYPE 3: MULTIPLE CHOICE
+      else if (q.type === 'mc') {
+        selectedMcOption = null;
+        const grid = document.createElement('div');
+        grid.className = 'options-grid';
+
+        q.options.forEach((optText, i) => {
+          const card = document.createElement('div');
+          card.className = 'option-card';
+          card.innerText = optText;
+          card.onclick = () => {
+            selectedMcOption = i;
+            document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+          };
+          grid.appendChild(card);
+        });
+
+        body.appendChild(grid);
+      }
+    }
+
+    // CHECK ANSWER & PROGRESS UNLOCK SYSTEM
+    function checkAnswer() {
+      const actionBtn = document.getElementById('action-btn');
+      const feedback = document.getElementById('feedback-msg');
+
+      if (actionBtn.innerText === 'CONTINUE') {
+        currentQuestionIndex++;
+        if (currentQuestionIndex >= activeSessionQuestions.length) {
+          // Unlock the next lesson if current completed lesson was highest unlocked
+          if (activeLessonIndex === userData.unlockedLesson && userData.unlockedLesson < lessonsData.length - 1) {
+            userData.unlockedLesson++;
+            saveUserData();
+          }
+          activeLessonIndex = null;
+          closeLesson();
+          renderPath();
+        } else {
+          renderQuestion();
+        }
+        return;
+      }
+
+      const q = activeSessionQuestions[currentQuestionIndex];
+      let isCorrect = false;
+
+      if (q.type === 'builder') {
+        const userStr = userBuilderAnswer.map(chip => chip.dataset.word).join(' ');
+        const targetStr = q.missingWords.join(' ');
+        isCorrect = (userStr === targetStr);
+      } else if (q.type === 'card_input') {
+        const val = document.getElementById('card-text-input').value.trim();
+        isCorrect = (val.toLowerCase() === q.answer.toLowerCase());
+      } else if (q.type === 'mc') {
+        isCorrect = (selectedMcOption === q.correct);
+      }
+
+      if (isCorrect) {
+        document.documentElement.style.setProperty('--bg-tint', 'rgba(88, 204, 2, 0.2)');
+        actionBtn.classList.add('correct-btn');
+        feedback.style.color = '#58cc02';
+        feedback.innerText = '✔ EXCELLENT!';
+      } else {
+        document.documentElement.style.setProperty('--bg-tint', 'rgba(255, 75, 75, 0.2)');
+        actionBtn.classList.add('wrong-btn');
+        feedback.style.color = '#ff4b4b';
+        feedback.innerText = '❌ INCORRECT!';
+        document.getElementById('show-answer-btn').style.display = 'inline-block';
+      }
+
+      actionBtn.innerText = 'CONTINUE';
+    }
+
+    // REVEAL THE CORRECT ANSWER FOR THE CURRENT QUESTION
+    function showAnswer() {
+      const q = activeSessionQuestions[currentQuestionIndex];
+      let answerText = '';
+
+      if (q.type === 'builder') {
+        answerText = q.missingWords.join(' ');
+      } else if (q.type === 'card_input') {
+        answerText = q.answer;
+      } else if (q.type === 'mc') {
+        answerText = q.options[q.correct];
+        document.querySelectorAll('.option-card').forEach((card, i) => {
+          if (i === q.correct) card.classList.add('correct-reveal');
+        });
+      }
+
+      const reveal = document.getElementById('answer-reveal');
+      reveal.innerText = '✔ ANSWER: ' + answerText;
+      reveal.style.display = 'block';
+    }
+
+    function resetFeedbackUI() {
+      document.documentElement.style.setProperty('--bg-tint', 'transparent');
+      const actionBtn = document.getElementById('action-btn');
+      actionBtn.className = 'mc-btn-green';
+      actionBtn.innerText = 'CHECK';
+      document.getElementById('feedback-msg').innerText = '';
+      document.getElementById('show-answer-btn').style.display = 'none';
+      const reveal = document.getElementById('answer-reveal');
+      reveal.style.display = 'none';
+      reveal.innerText = '';
+    }
+
+    // Initialize
+    loadUserData();
+    renderPath();
+  </script>
+</body>
+</html>
