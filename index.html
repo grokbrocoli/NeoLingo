@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="apple-touch-icon.png">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Minecraft NeoForge Academy</title>
+
+  <!-- Minecraft Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  
+  
+  <style>
+    :root {
+      --mc-dark-bg: #121212;
+      --mc-panel-bg: #222222;
+      --mc-text-gold: #ffaa00;
+      --mc-text-white: #ffffff;
+      --mc-text-gray: #aaaaaa;
+      --mc-green: #58cc02;
+      --mc-red: #ff4b4b;
+      --bg-tint: transparent;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      border-radius: 0px !important;
+      image-rendering: pixelated;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--mc-dark-bg);
+      color: var(--mc-text-white);
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Screen Tint Overlay for Correct/Incorrect Feedback */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-tint);
+      pointer-events: none;
+      z-index: 99;
+      transition: background-color 0.3s ease;
+    }
+
+    /* === SIDEBAR / NAVIGATION === */
+    #sidebar {
+      width: 260px;
+      background-color: #161616;
+      border-right: 4px solid #000;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 15px;
+      z-index: 10;
+    }
+
+    .brand {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 13px;
+      color: var(--mc-text-gold);
+      text-shadow: 2px 2px #000;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .nav-item {
+      background-color: #707070;
+      border-top: 3px solid #adadad;
+      border-left: 3px solid #adadad;
+      border-right: 3px solid #2a2a2a;
+      border-bottom: 3px solid #2a2a2a;
+      outline: 2px solid #000;
+      padding: 12px;
+      color: var(--mc-text-white);
+      cursor: pointer;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #555;
+    }
+
+    .nav-item:hover { background-color: #8b8b8b; }
+
+    .nav-item.active {
+      border-top: 3px solid #2a2a2a;
+      border-left: 3px solid #2a2a2a;
+      border-right: 3px solid #adadad;
+      border-bottom: 3px solid #adadad;
+      color: var(--mc-text-gold);
+      background-color: #555555;
+    }
+
+    .reset-btn {
+      margin-top: auto;
+      background-color: #a82020;
+      color: #fff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      padding: 10px;
+      border-top: 3px solid #e55555;
+      border-left: 3px solid #e55555;
+      border-right: 3px solid #500000;
+      border-bottom: 3px solid #500000;
+      outline: 2px solid #000;
+      cursor: pointer;
+      text-align: center;
+      text-shadow: 1px 1px #000;
+    }
+
+    .reset-btn:hover { background-color: #c42828; }
+    .reset-btn:active {
+      border-top: 3px solid #500000;
+      border-left: 3px solid #500000;
+      border-right: 3px solid #e55555;
+      border-bottom: 3px solid #e55555;
+    }
+
+    /* === MAIN CONTENT AREA === */
+    #main-content {
+      flex: 1;
+      position: relative;
+      background: #1c1c1c;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 10px 100px 10px;
+    }
+
+    /* === DUOLINGO-STYLE PATH CONTAINER === */
+    .path-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 48px;
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      padding-top: 20px;
+    }
+
+    #path-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .node-wrapper {
+      position: relative;
+      width: 66px;
+      height: 66px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .node-wrapper.locked {
+      filter: grayscale(100%) opacity(0.4);
+      cursor: not-allowed;
+    }
+
+    .sprite-canvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      display: block;
+      filter: drop-shadow(2px 4px 0px #000);
+      transition: filter 0.1s;
+    }
+
+    .node-number {
+      position: absolute;
+      right: -28px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      color: #fff;
+      background-color: #000;
+      border: 2px solid #555;
+      padding: 4px 6px;
+      pointer-events: none;
+    }
+
+    .chapter-divider {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 13px;
+      color: var(--mc-text-gold);
+      text-shadow: 2px 2px #000;
+      text-align: center;
+      width: 100%;
+      padding: 10px 0;
+      border-top: 3px solid #444;
+      border-bottom: 3px solid #444;
+      z-index: 2;
+      position: relative;
+      background-color: #1c1c1c;
+    }
+
+    /* Path Alignment S-Curve Offsets */
+    .offset-left-2 { transform: translateX(-80px); }
+    .offset-left-1 { transform: translateX(-40px); }
+    .offset-center { transform: translateX(0px); }
+    .offset-right-1 { transform: translateX(40px); }
+    .offset-right-2 { transform: translateX(80px); }
+
+    /* === BUBBLE POPUP === */
+    .popup-bubble {
+      position: absolute;
+      background-color: var(--mc-panel-bg);
+      border: 4px solid #000;
+      padding: 12px;
+      width: 200px;
+      text-align: center;
+      z-index: 20;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      top: -115px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .popup-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 12px 12px 0;
+      border-style: solid;
+      border-color: var(--mc-panel-bg) transparent;
+      display: block;
+      width: 0;
+    }
+
+    /* === CLASSIC MINECRAFT PIXEL BUTTON STYLES === */
+    .mc-btn-green {
+      background-color: #707070;
+      border-top: 4px solid #adadad;
+      border-left: 4px solid #adadad;
+      border-right: 4px solid #2a2a2a;
+      border-bottom: 4px solid #2a2a2a;
+      outline: 2px solid #000;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      padding: 12px 18px;
+      cursor: pointer;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #555;
+      transition: background-color 0.1s;
+    }
+
+    .mc-btn-green:hover {
+      background-color: #8b8b8b;
+    }
+
+    .mc-btn-green:active {
+      border-top: 4px solid #2a2a2a;
+      border-left: 4px solid #2a2a2a;
+      border-right: 4px solid #adadad;
+      border-bottom: 4px solid #adadad;
+      background-color: #555555;
+    }
+
+    .mc-btn-green.correct-btn {
+      background-color: #388e3c !important;
+      border-top: 4px solid #66bb6a !important;
+      border-left: 4px solid #66bb6a !important;
+      border-right: 4px solid #1b5e20 !important;
+      border-bottom: 4px solid #1b5e20 !important;
+    }
+
+    .mc-btn-green.wrong-btn {
+      background-color: #d32f2f !important;
+      border-top: 4px solid #ef5350 !important;
+      border-left: 4px solid #ef5350 !important;
+      border-right: 4px solid #b71c1c !important;
+      border-bottom: 4px solid #b71c1c !important;
+    }
+
+    /* HINT BUTTON SPECIFIC STYLE */
+    .mc-btn-hint {
+      background-color: #d89800;
+      border-top: 4px solid #ffcc00;
+      border-left: 4px solid #ffcc00;
+      border-right: 4px solid #885500;
+      border-bottom: 4px solid #885500;
+      outline: 2px solid #000;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      padding: 12px 18px;
+      cursor: pointer;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #ffaa00;
+      transition: background-color 0.1s;
+    }
+
+    .mc-btn-hint:hover {
+      background-color: #e6a817;
+    }
+
+    .mc-btn-hint:active {
+      border-top: 4px solid #885500;
+      border-left: 4px solid #885500;
+      border-right: 4px solid #ffcc00;
+      border-bottom: 4px solid #ffcc00;
+      background-color: #b07800;
+    }
+
+    /* SHOW ANSWER BUTTON SPECIFIC STYLE */
+    .mc-btn-show-answer {
+      background-color: #1a5fb4;
+      border-top: 4px solid #3584e4;
+      border-left: 4px solid #3584e4;
+      border-right: 4px solid #0f3b73;
+      border-bottom: 4px solid #0f3b73;
+      outline: 2px solid #000;
+      color: #ffffff;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      padding: 12px 18px;
+      cursor: pointer;
+      text-shadow: 2px 2px #000;
+      box-shadow: inset 0 0 0 2px #3584e4;
+      transition: background-color 0.1s;
+    }
+
+    .mc-btn-show-answer:hover {
+      background-color: #2570cc;
+    }
+
+    .mc-btn-show-answer:active {
+      border-top: 4px solid #0f3b73;
+      border-left: 4px solid #0f3b73;
+      border-right: 4px solid #3584e4;
+      border-bottom: 4px solid #3584e4;
+      background-color: #124a8f;
+    }
+
+    /* ANSWER REVEAL TEXT */
+    #answer-reveal {
+      display: none;
+      text-align: center;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: var(--mc-text-gold);
+      background-color: #2b2200;
+      border: 3px solid var(--mc-text-gold);
+      padding: 10px 16px;
+      max-width: 650px;
+      margin: 10px auto 0 auto;
+      width: 100%;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* CORRECT OPTION HIGHLIGHT WHEN REVEALED (see .mc-chip.correct-reveal below) */
+
+    /* === LESSON OVERLAY MODAL === */
+    #lesson-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: var(--mc-dark-bg);
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 25px;
+      z-index: 100;
+      overflow-y: auto;
+    }
+
+    .lesson-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      max-width: 700px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      height: 18px;
+      background-color: #000;
+      border: 3px solid #444;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--mc-green);
+      transition: width 0.3s ease;
+    }
+
+    .close-btn {
+      font-family: 'Press Start 2P', cursive;
+      color: var(--mc-text-gray);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .lesson-body {
+      max-width: 650px;
+      margin: 20px auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* HINT BOX CONTAINER */
+    .hint-box {
+      background-color: #2b2200;
+      border: 3px solid var(--mc-text-gold);
+      padding: 12px 16px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: #ffe082;
+      display: none;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+      line-height: 1.4;
+    }
+
+    .hint-box code {
+      background-color: #000;
+      color: #ffaa00;
+      padding: 2px 6px;
+      border: 1px solid #555;
+    }
+
+    /* DUOLINGO-STYLE MASCOT ROW */
+    .mascot-row {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 6px;
+    }
+
+    .mascot-canvas {
+      width: 128px;
+      height: 128px;
+      image-rendering: pixelated;
+      filter: drop-shadow(3px 5px 0px #000);
+      transition: transform 0.15s ease;
+    }
+
+    .mascot-canvas.reacting {
+      transform: scale(1.15) translateY(-4px);
+    }
+
+    /* --- DYNAMIC EXERCISE TYPE STYLES --- */
+    .card-prompt {
+      background-color: var(--mc-panel-bg);
+      border: 3px solid #444;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .card-icon {
+      font-size: 50px;
+    }
+
+    .text-input-field {
+      width: 100%;
+      background: #000;
+      border: 3px solid #555;
+      color: #fff;
+      font-family: 'VT323', monospace;
+      font-size: 24px;
+      padding: 10px;
+      outline: none;
+    }
+
+    /* Blank/slot that the tapped answer tile physically slides into (Duolingo-style) */
+    .card-answer-slot {
+      width: 100%;
+      min-height: 54px;
+      background: #000;
+      border: 3px solid #555;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6px;
+    }
+
+    .card-answer-slot .slot-placeholder-text {
+      color: #666;
+      font-style: italic;
+      font-family: 'VT323', monospace;
+      font-size: 20px;
+    }
+
+    /* Stacked full-width answer options below the slot */
+    .card-options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    .chip-btn-wide {
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .answer-line-area {
+      min-height: 60px;
+      border-bottom: 3px solid #555;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 0;
+      align-items: center;
+    }
+
+    .word-bank-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 15px;
+      min-height: 50px;
+    }
+
+    /* Static Pre-filled Blocks in Guided Mode */
+    .static-chip {
+      background-color: #2a2a2a;
+      border: 2px solid #555;
+      padding: 8px 14px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: #aaa;
+    }
+
+    /* === CHIP / WORD BANK BUTTON STYLES & BLUE SELECTION STATE === */
+    .chip-btn {
+      background-color: #3c3c3c;
+      border-top: 3px solid #666;
+      border-left: 3px solid #666;
+      border-right: 3px solid #111;
+      border-bottom: 3px solid #111;
+      outline: 2px solid #000;
+      padding: 8px 14px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      cursor: pointer;
+      color: #fff;
+      text-shadow: 1px 1px #000;
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.15s, border-color 0.15s;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Blue body styling when moved to answer line */
+    .chip-btn.selected-blue {
+      background-color: #1a5fb4;
+      border-top: 3px solid #666;
+      border-left: 3px solid #3584e4;
+      border-right: 3px solid #0f3b73;
+      border-bottom: 3px solid #0f3b73;
+    }
+
+    .chip-btn:active {
+      border-top: 3px solid #111;
+      border-left: 3px solid #111;
+      border-right: 3px solid #666;
+      border-bottom: 3px solid #666;
+    }
+
+    .chip-placeholder {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    /* Multiple Choice - pill chips you tap (word-bank style, not a click-list) */
+    .mc-options-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .mc-chip {
+      background-color: #3c3c3c;
+      border-top: 3px solid #666;
+      border-left: 3px solid #666;
+      border-right: 3px solid #111;
+      border-bottom: 3px solid #111;
+      outline: 2px solid #000;
+      padding: 10px 16px;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      cursor: pointer;
+      color: #fff;
+      text-shadow: 1px 1px #000;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s, border-color 0.15s;
+    }
+
+    .mc-chip:hover {
+      background-color: #4a4a4a;
+    }
+
+    .mc-chip.selected {
+      transform: scale(1.1);
+      background-color: #1a5fb4;
+      border-top: 3px solid #666;
+      border-left: 3px solid #3584e4;
+      border-right: 3px solid #0f3b73;
+      border-bottom: 3px solid #0f3b73;
+      color: #fff;
+    }
+
+    .mc-chip.correct-reveal,
+    .chip-btn.correct-reveal {
+      border-top: 3px solid #66bb6a !important;
+      border-left: 3px solid #66bb6a !important;
+      border-right: 3px solid #1b5e20 !important;
+      border-bottom: 3px solid #1b5e20 !important;
+      background-color: #1b3a1b !important;
+      color: #a5d6a7 !important;
+    }
+
+    .lesson-footer {
+      max-width: 700px;
+      margin: 0 auto;
+      width: 100%;
+      border-top: 3px solid var(--mc-panel-bg);
+      padding-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* === RESPONSIVE MOBILE ADJUSTMENTS === */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      #sidebar {
+        width: 100%;
+        height: auto;
+        padding: 10px 15px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        border-right: none;
+        border-bottom: 4px solid #000;
+      }
+      .brand { margin-bottom: 0; font-size: 11px; }
+      .nav-item { display: none; }
+      .reset-btn { margin-top: 0; padding: 6px 10px; font-size: 8px; }
+      .path-container { max-width: 100%; }
+      .offset-left-2 { transform: translateX(-50px); }
+      .offset-left-1 { transform: translateX(-25px); }
+      .offset-right-1 { transform: translateX(25px); }
+      .offset-right-2 { transform: translateX(50px); }
+      #lesson-modal { padding: 15px; }
+    }
+
+    #music-toggle {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      background-color: #222222;
+      border: 3px solid #000;
+      outline: 2px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 200;
+      box-shadow: 2px 2px 0px #000;
+    }
+
+    #music-toggle:hover {
+      background-color: #333333;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR NAVIGATION -->
+  <div id="sidebar">
+    <div class="brand">NEOFORGE<br>ACADEMY</div>
+    <div class="nav-item active">⛏️ Learn Java</div>
+    <div class="reset-btn" onclick="resetProgress()">RESET</div>
+  </div>
+
+  <!-- MAIN LEARNING PATH VIEW -->
+  <div id="main-content">
+    <h2 id="chapter-heading" style="font-family: 'Press Start 2P'; color: var(--mc-text-gold); text-shadow: 2px 2px #000; margin-bottom: 20px; text-align:center; font-size: 16px;">
+      CHAPTER 1: BASICS
+    </h2>
+
+    <div class="path-container" id="path-container">
+      <svg id="path-svg"></svg>
+    </div>
+  </div>
+
+  <!-- LESSON OVERLAY -->
+  <div id="lesson-modal">
+    <div class="lesson-header">
+      <span class="close-btn" onclick="closeLesson()">✕</span>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="lesson-progress"></div>
+      </div>
+    </div>
+
+    <div class="lesson-body" id="exercise-body">
+      <!-- Dynamic Question Content Injected Here -->
+    </div>
+
+    <div id="answer-reveal"></div>
+
+    <div class="lesson-footer">
+      <button class="mc-btn-hint" id="hint-btn" onclick="toggleHint()">💡 HINT</button>
+      <button class="mc-btn-show-answer" id="show-answer-btn" style="display:none;" onclick="showAnswer()">👁 SHOW ANSWER</button>
+      <div id="feedback-msg"></div>
+      <button class="mc-btn-green" id="action-btn" onclick="checkAnswer()">CHECK</button>
+    </div>
+  </div>
+
+  <!-- AUDIO ELEMENTS -->
+  <audio id="bg-music" src="sounds/bg-music.mp3" loop preload="auto"></audio>
+  <audio id="correct-sound" src="sounds/correct-answer.mp3" preload="auto"></audio>
+  <audio id="wrong-sound" src="sounds/wrong-answer.mp3" preload="auto"></audio>
+  <audio id="start-lesson-sound" src="sounds/start-lesson.mp3" preload="auto"></audio>
+
+  <!-- MUSIC TOGGLE BUTTON -->
+  <div id="music-toggle" onclick="toggleMusic()" title="Toggle music">🔊</div>
+
+  <script>
+    // --- AUDIO / SOUND EFFECTS ---
+    const bgMusic = document.getElementById('bg-music');
+    const correctSound = document.getElementById('correct-sound');
+    const wrongSound = document.getElementById('wrong-sound');
+    const startLessonSound = document.getElementById('start-lesson-sound');
+
+    bgMusic.volume = 0.35;
+    let musicEnabled = true;
+
+    function playSound(audioEl) {
+      if (!audioEl) return;
+      audioEl.currentTime = 0;
+      audioEl.play().catch(() => {});
+    }
+
+    function toggleMusic() {
+      musicEnabled = !musicEnabled;
+      const btn = document.getElementById('music-toggle');
+      if (musicEnabled) {
+        bgMusic.play().catch(() => {});
+        btn.innerText = '🔊';
+      } else {
+        bgMusic.pause();
+        btn.innerText = '🔇';
+      }
+    }
+
+    // Browsers block autoplay with sound until the user interacts with the page.
+    // Start the background music on the first click/keypress anywhere on the site.
+    function startBgMusicOnFirstInteraction() {
+      if (musicEnabled) {
+        bgMusic.play().catch(() => {});
+      }
+      document.removeEventListener('click', startBgMusicOnFirstInteraction);
+      document.removeEventListener('keydown', startBgMusicOnFirstInteraction);
+    }
+    document.addEventListener('click', startBgMusicOnFirstInteraction);
+    document.addEventListener('keydown', startBgMusicOnFirstInteraction);
+    // --- 1. DEFAULT SPRITE (STARBUTTON) ---
+    const STARBUTTON_PALETTE = {
+        0: "transparent", 1: "#101010", 2: "#585860", 3: "#484848", 4: "#404030",
+        5: "#383838", 6: "#303828", 7: "#a0d010", 8: "#90b818", 9: "#88a828",
+        10: "#607820", 11: "#587018", 12: "#506018", 13: "#505058", 14: "#404040",
+        15: "#383828", 16: "#282830"
+    };
+
+    const STARBUTTON_PIXELS = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,2,3,3,3,3,3,3,3,3,4,3,3,3,3,3,3,3,3,3,2,1],
+        [1,3,5,5,5,5,5,5,5,6,7,6,5,5,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,5,6,8,7,6,5,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,6,7,8,7,6,5,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,6,8,9,8,7,6,5,5,5,5,5,5,3,1],
+        [1,3,5,5,5,5,5,5,6,8,9,8,7,6,5,5,5,5,5,5,3,1],
+        [1,3,5,6,6,6,6,6,7,9,9,9,8,7,6,6,6,6,6,5,3,1],
+        [1,3,6,7,7,7,7,7,8,9,9,9,9,8,7,7,7,7,7,6,3,1],
+        [1,3,6,10,9,9,8,8,9,9,9,9,9,9,8,8,9,9,10,6,3,1],
+        [1,3,5,6,11,12,9,9,9,9,9,9,9,9,9,9,12,11,6,5,3,1],
+        [1,3,5,5,6,6,12,9,9,9,9,9,9,9,9,12,6,6,5,5,3,1],
+        [1,3,5,5,5,6,9,9,9,9,9,9,9,9,9,9,6,5,5,5,3,1],
+        [1,3,5,5,5,6,9,9,9,9,9,9,9,9,9,9,6,5,5,5,3,1],
+        [1,3,5,5,6,9,9,9,9,12,12,12,12,9,9,9,9,6,5,5,3,1],
+        [1,3,5,6,9,9,9,9,12,6,6,6,6,12,9,9,9,9,6,5,3,1],
+        [1,3,6,10,10,11,11,12,6,5,5,5,5,6,12,11,11,10,10,6,3,1],
+        [1,13,14,15,15,15,15,15,14,14,14,14,14,14,15,15,15,15,15,14,13,1],
+        [1,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,1],
+        [1,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    // --- 2. HOVER SPRITE (STARBUTTONHOVER) ---
+    const STARBUTTONHOVER_PALETTE = {
+        0: "transparent", 1: "#204050", 2: "#203848", 3: "#183040", 4: "#586068",
+        5: "#405058", 6: "#384840", 7: "#384040", 8: "#304038", 9: "#98d020",
+        10: "#88b820", 11: "#80a830", 12: "#587838", 13: "#507030", 14: "#486830",
+        15: "#505860", 16: "#384850", 17: "#304030", 18: "#185068", 19: "#182838",
+        20: "#182028"
+    };
+
+    const STARBUTTONHOVER_PIXELS = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+        [3,4,5,5,5,5,5,5,5,5,6,5,5,5,5,5,5,5,5,5,4,3],
+        [3,5,7,7,7,7,7,7,7,8,9,8,7,7,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,7,8,10,9,8,7,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,8,9,10,9,8,7,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,8,10,11,10,9,8,7,7,7,7,7,7,5,3],
+        [3,5,7,7,7,7,7,7,8,10,11,10,9,8,7,7,7,7,7,7,5,3],
+        [3,5,7,8,8,8,8,8,9,11,11,11,10,9,8,8,8,8,8,7,5,3],
+        [3,5,8,9,9,9,9,9,10,11,11,11,11,10,9,9,9,9,9,8,5,3],
+        [3,5,8,12,11,11,10,10,11,11,11,11,11,11,10,10,11,11,12,8,5,3],
+        [3,5,7,8,13,14,11,11,11,11,11,11,11,11,11,11,14,13,8,7,5,3],
+        [3,5,7,7,8,8,14,11,11,11,11,11,11,11,11,14,8,8,7,7,5,3],
+        [3,5,7,7,7,8,11,11,11,11,11,11,11,11,11,11,8,7,7,7,5,3],
+        [3,5,7,7,7,8,11,11,11,11,11,11,11,11,11,11,8,7,7,7,5,3],
+        [3,5,7,7,8,11,11,11,11,14,14,14,14,11,11,11,11,8,7,7,5,3],
+        [3,5,7,8,11,11,11,11,14,8,8,8,8,14,11,11,11,11,8,7,5,3],
+        [3,5,8,12,12,13,13,14,8,7,7,7,7,8,14,13,13,12,12,8,5,3],
+        [3,15,16,17,17,17,17,17,16,16,16,16,16,16,17,17,17,17,17,16,15,3],
+        [3,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,3],
+        [3,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,3],
+        [19,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,19]
+    ];
+
+    // --- 3. CLICKED SPRITE (STARBUTTONCLICK) ---
+    const STARBUTTONCLICK_PALETTE = {
+        0: "transparent", 1: "#204050", 2: "#203848", 3: "#183040", 4: "#182828",
+        5: "#586068", 6: "#405058", 7: "#384840", 8: "#384040", 9: "#304038",
+        10: "#98d020", 11: "#88b820", 12: "#80a830", 13: "#587838", 14: "#507030",
+        15: "#486830", 16: "#505860", 17: "#384850", 18: "#304030", 19: "#185068",
+        20: "#182838", 21: "#182028"
+    };
+
+    const STARBUTTONCLICK_PIXELS = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+        [3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,3],
+        [3,5,6,6,6,6,6,6,6,6,7,6,6,6,6,6,6,6,6,6,5,3],
+        [3,6,8,8,8,8,8,8,8,9,10,9,8,8,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,8,9,11,10,9,8,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,9,10,11,10,9,8,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,9,11,12,11,10,9,8,8,8,8,8,8,6,3],
+        [3,6,8,8,8,8,8,8,9,11,12,11,10,9,8,8,8,8,8,8,6,3],
+        [3,6,8,9,9,9,9,9,10,12,12,12,11,10,9,9,9,9,9,8,6,3],
+        [3,6,9,10,10,10,10,10,11,12,12,12,12,11,10,10,10,10,10,9,6,3],
+        [3,6,9,13,12,12,11,11,12,12,12,12,12,12,11,11,12,12,13,9,6,3],
+        [3,6,8,9,14,15,12,12,12,12,12,12,12,12,12,12,15,14,9,8,6,3],
+        [3,6,8,8,9,9,15,12,12,12,12,12,12,12,12,15,9,9,8,8,6,3],
+        [3,6,8,8,8,9,12,12,12,12,12,12,12,12,12,12,9,8,8,8,6,3],
+        [3,6,8,8,8,9,12,12,12,12,12,12,12,12,12,12,9,8,8,8,6,3],
+        [3,6,8,8,9,12,12,12,12,15,15,15,15,12,12,12,12,9,8,8,6,3],
+        [3,6,8,9,12,12,12,12,15,9,9,9,9,15,12,12,12,12,9,8,6,3],
+        [3,6,9,13,13,14,14,15,9,8,8,8,8,9,15,14,13,13,9,6,3],
+        [3,16,17,18,18,18,18,18,17,17,17,17,17,17,18,18,18,18,18,17,16,3],
+        [3,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,3],
+        [20,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,20]
+    ];
+
+    function drawPixelSprite(canvas, palette, pixels) {
+      const rows = pixels.length;
+      const cols = pixels[0].length;
+      canvas.width = cols;
+      canvas.height = rows;
+
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, cols, rows);
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const colorKey = pixels[y][x];
+          const color = palette[colorKey];
+          if (color && color !== "transparent") {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    function drawSprite(canvas, state) {
+      let palette = STARBUTTON_PALETTE;
+      let pixels = STARBUTTON_PIXELS;
+
+      if (state === 'hover') {
+        palette = STARBUTTONHOVER_PALETTE;
+        pixels = STARBUTTONHOVER_PIXELS;
+      } else if (state === 'clicked') {
+        palette = STARBUTTONCLICK_PALETTE;
+        pixels = STARBUTTONCLICK_PIXELS;
+      }
+
+      drawPixelSprite(canvas, palette, pixels);
+    }
+
+    // --- DUOLINGO-STYLE MASCOT SPRITES (32x32, extracted from uploaded textures) ---
+    const VILLAGER_DEFAULT_PALETTE = {0: "transparent", 1: "#271909", 2: "#d38e40", 3: "#c98130", 4: "#b7772f", 5: "#955f22", 6: "#553614", 7: "#241712", 8: "#7d4e3b", 9: "#120804", 10: "#8c553e", 11: "#a8664b", 12: "#9a5f47", 13: "#36221a", 14: "#8e5b46", 15: "#2c1c15", 16: "#271912", 17: "#b97457", 18: "#291a14", 19: "#2f1e17", 20: "#398123", 21: "#2c611c", 22: "#f1f1f1", 23: "#61a84b", 24: "#235514", 25: "#e3e3e3", 26: "#82503c", 27: "#370d08", 28: "#3d271e", 29: "#420f0a", 30: "#1a100d", 31: "#4f3028", 32: "#492e26", 33: "#3f2821", 34: "#402821", 35: "#170e0b", 36: "#1e120f", 37: "#221411", 38: "#482e26", 39: "#5a372e", 40: "#5e3b31", 41: "#52342b", 42: "#422a23", 43: "#271713", 44: "#673f34", 45: "#55352c", 46: "#5b382e", 47: "#53342b", 48: "#613c32"};
+    const VILLAGER_DEFAULT_PIXELS = [
+      [0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,1,2,3,4,1,3,4,2,2,5,4,6,5,4,1,1,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,1,1,5,2,3,1,5,2,3,4,2,3,3,2,4,1,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,1,0,0,1,3,4,4,1,2,3,4,4,2,5,4,4,2,1,0,0,1,0,0,0,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,7,8,1,8,7,9,9,9,9,9,10,11,12,12,7,1,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,14,14,11,15,10,10,10,10,10,9,9,9,9,16,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,17,11,13,17,17,17,17,11,10,10,10,10,18,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,17,11,13,17,17,17,11,11,12,12,12,12,19,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,17,11,13,20,21,22,11,12,12,20,21,22,19,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,17,11,13,23,24,25,11,12,12,23,24,25,19,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,17,11,13,10,10,10,12,12,12,26,26,26,19,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,11,12,13,11,27,27,28,28,28,28,12,12,19,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,17,11,12,13,11,27,29,28,17,17,12,13,12,18,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,11,12,12,19,11,12,29,29,28,17,12,13,12,7,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,13,19,19,18,18,18,18,18,18,28,17,12,13,7,7,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,30,31,31,32,33,30,31,31,28,12,12,13,34,35,36,37,37,37,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,37,37,37,38,37,39,39,39,13,13,13,32,36,40,40,41,42,37,0,0,0,0,0],
+      [0,0,0,0,0,0,0,43,40,44,44,40,43,43,43,44,39,39,45,46,47,37,40,40,40,41,42,37,0,0,0,0],
+      [0,0,0,0,0,0,0,43,40,44,44,44,44,44,40,43,43,43,43,43,37,37,37,37,40,40,41,42,37,0,0,0],
+      [0,0,0,0,0,0,0,43,40,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,40,40,41,42,37,0,0,0],
+      [0,0,0,0,0,0,0,37,40,40,44,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,41,42,37,0,0,0],
+      [0,0,0,0,0,0,0,37,41,41,40,41,41,41,41,41,41,41,41,41,41,41,41,41,41,41,42,42,37,0,0,0],
+      [0,0,0,0,0,0,0,0,37,42,41,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,37,0,0,0],
+      [0,0,0,0,0,0,0,0,30,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,37,0,0,0,0],
+      [0,0,0,0,0,0,0,0,36,44,40,41,42,30,44,44,44,44,48,41,42,30,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,44,40,41,42,36,44,44,44,48,48,41,42,36,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,44,40,41,42,37,44,44,48,40,41,41,42,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,43,40,40,41,42,43,40,40,40,41,41,42,42,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,43,40,41,42,42,37,41,41,41,41,42,42,42,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,43,41,42,42,42,37,42,42,42,42,42,42,42,37,0,0,0,0,0,0,0,0,0,0]
+    ];
+
+    const CREEPER_DEFAULT_PALETTE = {0: "transparent", 1: "#0d250d", 2: "#319d31", 3: "#2e9a2e", 4: "#207a20", 5: "#208d20", 6: "#0b210b", 7: "#146a14", 8: "#147b14", 9: "#158315", 10: "#2e8d2e", 11: "#0a710a", 12: "#1b251b", 13: "#1e291e", 14: "#85ce85", 15: "#0b7a0b", 16: "#208720", 17: "#081708", 18: "#131a13", 19: "#1b241b", 20: "#136113", 21: "#1f7a1f", 22: "#126a12", 23: "#091609", 24: "#085d08", 25: "#096109", 26: "#182218", 27: "#064d06", 28: "#0e150e", 29: "#075207", 30: "#0a580a", 31: "#0d540d", 32: "#050b05", 33: "#0e500e", 34: "#0f520f", 35: "#144a14", 36: "#0e620e", 37: "#071207", 38: "#0d700d", 39: "#0c690c", 40: "#0c540c"};
+    const CREEPER_DEFAULT_PIXELS = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,3,3,3,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,1,4,4,5,5,3,3,3,3,3,1,1,1,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,6,7,8,8,7,9,4,4,10,3,3,1,10,10,1,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,6,11,12,13,14,15,8,8,5,4,16,1,10,10,10,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,17,11,18,19,13,11,12,13,14,20,21,1,21,21,10,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,17,15,11,11,18,12,11,18,19,13,22,6,22,22,21,10,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,23,15,15,11,11,11,11,11,18,12,24,6,24,24,22,21,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,23,25,25,26,26,26,15,11,11,24,24,17,24,24,24,6,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,27,28,26,18,18,26,26,11,24,24,17,24,24,24,24,6,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,27,18,18,28,28,18,26,29,29,24,23,24,24,24,24,17,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,30,28,28,24,24,28,18,28,29,23,30,24,24,24,17,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,23,23,30,30,30,28,28,28,24,23,31,30,30,30,23,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,32,33,23,23,23,30,30,30,23,34,31,31,31,31,23,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,32,33,33,33,33,23,23,23,23,35,34,34,34,23,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,32,36,33,33,33,33,32,33,33,23,23,23,23,23,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,37,38,36,36,36,33,32,33,33,33,33,33,32,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,15,15,38,39,30,32,40,40,40,33,33,33,32,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,15,15,15,11,24,37,30,30,30,40,40,40,32,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,15,15,11,24,24,37,24,24,24,30,30,30,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,23,15,15,15,11,24,23,24,24,24,24,24,24,37,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,23,15,15,15,11,24,23,24,24,24,24,24,24,23,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,23,15,15,15,11,24,23,24,24,24,24,24,24,23,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,15,15,11,24,24,23,24,24,24,24,24,24,23,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,23,15,15,15,11,24,23,24,24,24,24,24,24,23,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,15,15,15,11,24,37,24,24,24,24,24,24,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,37,15,15,15,11,24,37,24,24,24,24,24,24,37,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,37,39,39,39,39,30,37,30,30,30,30,30,30,37,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,32,40,40,40,40,40,32,40,40,40,40,40,40,32,0,0,0,0,0,0,0,0,0]
+    ];
+
+    const CREEPER_ALT_PALETTE = {0: "transparent", 1: "#0d250d", 2: "#319d31", 3: "#2e9a2e", 4: "#207a20", 5: "#208d20", 6: "#0b210b", 7: "#146a14", 8: "#147b14", 9: "#158315", 10: "#2e8d2e", 11: "#0a710a", 12: "#1b251b", 13: "#1e291e", 14: "#0b7a0b", 15: "#208720", 16: "#081708", 17: "#131a13", 18: "#85ce85", 19: "#136113", 20: "#1f7a1f", 21: "#126a12", 22: "#091609", 23: "#085d08", 24: "#096109", 25: "#182218", 26: "#064d06", 27: "#0e150e", 28: "#075207", 29: "#0a580a", 30: "#0c540c", 31: "#0d540d", 32: "#0f520f", 33: "#050b05", 34: "#0e500e", 35: "#144a14", 36: "#0e620e", 37: "#071207", 38: "#0d700d", 39: "#0c690c"};
+    const CREEPER_ALT_PIXELS = [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,3,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,1,4,4,5,5,3,3,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,6,7,8,8,7,9,4,4,10,3,3,1,1,1,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,6,11,12,13,11,14,8,8,5,4,15,1,10,10,1,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,16,11,17,18,13,11,12,13,8,19,20,1,20,20,10,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,16,14,11,17,17,12,11,17,18,13,21,6,21,21,20,10,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,22,14,14,11,11,11,11,17,17,12,23,6,23,23,21,20,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,22,24,24,25,25,25,14,11,11,23,23,16,23,23,23,6,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,26,27,25,17,17,25,25,11,23,23,16,23,23,23,23,6,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,26,17,17,27,27,17,25,28,28,23,22,23,23,23,23,16,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,29,27,27,23,23,27,17,27,28,22,29,23,23,23,16,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,30,30,29,29,29,27,27,27,23,22,31,29,29,29,22,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,22,22,30,30,30,29,29,29,22,32,31,31,31,31,22,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,33,34,22,22,22,30,30,30,22,35,32,32,32,22,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,33,36,34,34,34,22,22,22,22,35,35,35,35,22,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,37,38,36,36,36,34,33,34,34,22,22,22,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,14,14,38,39,29,33,30,30,30,34,34,34,33,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,14,14,14,11,23,37,29,29,29,30,30,30,33,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,14,14,11,23,23,37,23,23,23,29,29,29,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,22,14,14,14,11,23,22,23,23,23,23,23,23,37,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,22,14,14,14,11,23,22,23,23,23,23,23,23,22,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,22,14,14,14,11,23,22,23,23,23,23,23,23,22,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,14,14,11,23,23,22,23,23,23,23,23,23,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,22,14,14,14,11,23,22,23,23,23,23,23,23,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,37,14,14,14,11,23,37,23,23,23,23,23,23,37,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,37,14,14,14,11,23,37,23,23,23,23,23,23,37,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,37,39,39,39,39,29,37,29,29,29,29,29,29,37,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,33,30,30,30,30,30,33,30,30,30,30,30,30,33,0,0,0,0,0,0,0,0,0]
+    ];
+
+    const VILLAGER_ALT_PALETTE = {0: "transparent", 1: "#271909", 2: "#d38e40", 3: "#c98130", 4: "#b7772f", 5: "#955f22", 6: "#553614", 7: "#241712", 8: "#7d4e3b", 9: "#7b4d3a", 10: "#150a06", 11: "#36221a", 12: "#8e5b46", 13: "#a8664b", 14: "#2c1c15", 15: "#120804", 16: "#794d3c", 17: "#271912", 18: "#b97457", 19: "#8c553e", 20: "#9a5f47", 21: "#291a14", 22: "#2f1e17", 23: "#ffffff", 24: "#398123", 25: "#2c611c", 26: "#e3e3e3", 27: "#61a84b", 28: "#235514", 29: "#82503c", 30: "#370d08", 31: "#3d271e", 32: "#420f0a", 33: "#1a100d", 34: "#4f3028", 35: "#492e26", 36: "#3f2821", 37: "#462b23", 38: "#402821", 39: "#170e0b", 40: "#1e120f", 41: "#221411", 42: "#482e26", 43: "#5a372e", 44: "#503128", 45: "#5e3b31", 46: "#52342b", 47: "#422a23", 48: "#271713", 49: "#673f34", 50: "#55352c", 51: "#5b382e", 52: "#53342b", 53: "#613c32"};
+    const VILLAGER_ALT_PIXELS = [
+      [0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,1,2,3,4,1,3,4,2,2,5,4,6,5,4,1,1,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,1,1,5,2,3,1,5,2,3,4,2,3,3,2,4,1,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,1,0,0,1,3,4,4,1,2,3,4,4,2,5,4,4,2,1,0,0,1,0,0,0,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,7,8,1,8,7,9,9,9,9,10,10,10,10,10,7,1,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,12,12,13,14,15,15,15,15,16,16,16,16,16,17,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,18,13,11,19,19,19,19,13,13,20,20,20,21,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,18,13,11,18,18,18,13,13,20,20,20,20,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,18,13,11,23,24,25,13,20,20,23,24,25,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,18,13,11,26,27,28,13,20,20,26,27,28,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,18,13,11,19,19,19,20,20,20,29,29,29,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,13,20,11,13,30,30,31,31,31,20,20,20,22,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,18,13,20,11,13,30,32,31,18,20,11,30,20,21,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,13,20,20,22,13,20,32,31,18,20,11,32,20,7,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,11,22,22,21,21,21,21,21,31,18,20,11,7,7,7,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,33,34,34,35,36,33,34,31,20,20,11,37,38,39,40,41,41,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,41,41,41,41,42,41,43,43,11,11,11,44,35,40,45,46,47,41,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,48,45,49,49,45,48,48,49,49,43,43,50,51,52,41,45,45,46,47,41,0,0,0,0,0],
+      [0,0,0,0,0,0,0,48,45,49,49,49,45,48,49,49,49,49,53,51,52,41,45,45,45,46,47,41,0,0,0,0],
+      [0,0,0,0,0,0,0,48,45,49,49,49,49,45,48,49,49,53,51,52,52,41,40,45,45,46,52,41,0,0,0,0],
+      [0,0,0,0,0,0,0,41,45,45,49,49,49,49,45,48,48,48,48,48,41,41,41,41,45,45,46,47,41,0,0,0],
+      [0,0,0,0,0,0,0,41,46,46,45,49,49,49,49,49,49,49,49,49,49,49,49,49,45,45,46,47,41,0,0,0],
+      [0,0,0,0,0,0,0,0,41,47,46,45,45,45,45,45,45,45,45,45,45,45,45,45,45,45,46,47,41,0,0,0],
+      [0,0,0,0,0,0,0,0,33,41,47,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,47,47,41,0,0,0],
+      [0,0,0,0,0,0,0,0,40,49,41,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,47,41,0,0,0],
+      [0,0,0,0,0,0,0,0,41,49,45,41,41,41,41,41,41,41,41,41,41,41,41,41,41,41,41,41,0,0,0,0],
+      [0,0,0,0,0,0,0,0,41,49,45,46,47,33,49,49,53,45,46,46,47,33,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,48,45,45,46,47,40,45,45,45,46,46,47,47,40,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,48,45,46,47,47,41,46,46,46,46,47,47,47,41,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,48,46,47,47,47,48,47,47,47,47,47,47,47,41,0,0,0,0,0,0,0,0,0,0]
+    ];
+
+    const MASCOTS = {
+      villager: { default: { palette: VILLAGER_ALT_PALETTE, pixels: VILLAGER_ALT_PIXELS }, alt: { palette: VILLAGER_DEFAULT_PALETTE, pixels: VILLAGER_DEFAULT_PIXELS } },
+      creeper: { default: { palette: CREEPER_ALT_PALETTE, pixels: CREEPER_ALT_PIXELS }, alt: { palette: CREEPER_DEFAULT_PALETTE, pixels: CREEPER_DEFAULT_PIXELS } }
+    };
+
+    function drawMascot(canvas, kind, variant) {
+      const set = MASCOTS[kind][variant];
+      drawPixelSprite(canvas, set.palette, set.pixels);
+    }
+
+    // --- CURRICULUM DATA WITH CODE STRUCTURE HINTS ---
+    // --- LESSON TOPICS: each has 15 core facts; a generator expands each into 60 questions ---
+    const LESSON_TOPICS = [
+      // ===== BASIC (8) =====
+      { title: "Registry Keys", icon: "📦", tier: "basic", facts: [
+        ["DeferredRegister", "Helper class for delayed registry entries"],
+        ["DeferredItem", "Type-safe holder for a registered item"],
+        ["Registries.ITEM", "Vanilla registry key for items"],
+        ["ResourceLocation", "Namespaced ID like modid:path"],
+        [".register()", "Method that queues an entry for registration"],
+        ["Supplier<T>", "Lazy factory passed to register calls"],
+        ["modid", "Unique lowercase identifier for your mod"],
+        ["IEventBus", "Bus that registry events are fired on"],
+        ["RegisterEvent", "Event fired when vanilla registries open"],
+        ["Holder<T>", "Reference wrapper around a registered object"],
+        [".get()", "Method to retrieve the registered instance"],
+        ["ITEMS", "Common name for a DeferredRegister<Item> field"],
+        ["static final", "Modifiers used for registry constant fields"],
+        ["namespace", "The modid portion of a ResourceLocation"],
+        ["RegistryObject", "Older wrapper returned by classic register calls"]
+      ]},
+      { title: "Custom Items", icon: "💎", tier: "basic", facts: [
+        ["Item.Properties", "Builder class configuring item behavior"],
+        [".stacksTo(64)", "Sets max stack size for an item"],
+        [".durability(250)", "Sets max damage value for tools"],
+        [".rarity(Rarity.RARE)", "Sets the item's rarity color tier"],
+        [".food(FoodProperties)", "Attaches food/eating behavior to an item"],
+        ["use()", "Called when right-clicking with the item"],
+        ["Item.Properties.of()", "Static factory creating a Properties instance"],
+        ["ItemStack", "Represents a quantity of an item"],
+        ["getMaxStackSize()", "Returns max items allowed per stack"],
+        ["isFoil()", "Controls the enchant glint effect on items"],
+        ["Tier", "Interface defining tool material stats"],
+        ["SwordItem", "Base class for sword-type weapons"],
+        [".fireResistant()", "Makes item survive in lava/fire"],
+        ["CreativeModeTab", "Groups items in the creative inventory"],
+        ["Rarity.EPIC", "A purple-tier rarity color constant"]
+      ]},
+      { title: "Event Listeners", icon: "🔥", tier: "basic", facts: [
+        ["@SubscribeEvent", "Annotation marking a method as an event handler"],
+        ["IEventBus", "Object listeners register onto"],
+        ["MOD bus", "Bus for mod lifecycle setup events"],
+        ["NeoForge.EVENT_BUS", "Bus for gameplay events"],
+        ["FMLCommonSetupEvent", "Fired during common mod setup"],
+        ["ServerStartingEvent", "Fired when the server starts"],
+        ["PlayerLoggedInEvent", "Fired when a player logs in"],
+        ["register(this)", "Registers an event listener object"],
+        ["EventPriority", "Controls handler execution order"],
+        ["event.isCanceled()", "Checks if an event was canceled"],
+        ["@Mod.EventBusSubscriber", "Class annotation for static event handlers"],
+        ["TickEvent", "Fired every game tick"],
+        ["LivingDeathEvent", "Fired when a living entity dies"],
+        ["setCanceled(true)", "Cancels a cancellable event"],
+        ["EntityJoinLevelEvent", "Fired when an entity joins the world"]
+      ]},
+      { title: "Block Properties", icon: "🧱", tier: "basic", facts: [
+        ["BlockBehaviour.Properties", "Builder class for block settings"],
+        [".of()", "Static factory starting a Properties chain"],
+        [".destroyTime(2.0f)", "Sets how long a block takes to break"],
+        [".explosionResistance(6f)", "Sets block resistance to explosions"],
+        [".strength(a,b)", "Shortcut setting hardness and resistance"],
+        [".noOcclusion()", "Marks block as not fully opaque"],
+        [".lightLevel()", "Sets emitted light level function"],
+        [".requiresCorrectToolForDrops()", "Requires proper tool for drops"],
+        [".sound(SoundType)", "Sets block interaction sound set"],
+        [".friction(0.6f)", "Sets block surface slipperiness"],
+        ["Properties.copy()", "Copies settings from an existing block"],
+        [".instabreak()", "Makes a block break instantly"],
+        [".noLootTable()", "Disables the block's default drops"],
+        ["MapColor", "Sets the block's color on maps"],
+        [".pushReaction()", "Sets how pistons affect the block"]
+      ]},
+      { title: "Main Mod Class", icon: "🧪", tier: "basic", facts: [
+        ["@Mod(\"modid\")", "Marks the main mod entry class"],
+        ["FMLJavaModLoadingContext", "Provides the mod event bus"],
+        ["modEventBus", "Bus used for setup-phase events"],
+        ["Example(IEventBus bus)", "Typical mod constructor signature"],
+        ["ITEMS.register(bus)", "Registers a DeferredRegister to the bus"],
+        ["neoforge.mods.toml", "TOML file describing mod metadata"],
+        ["modId key", "TOML key matching the @Mod string"],
+        ["FMLCommonSetupEvent", "Common setup lifecycle event"],
+        ["FMLClientSetupEvent", "Client-only setup lifecycle event"],
+        ["ModList", "Class used to query loaded mods"],
+        ["main sourceSet", "Default Gradle folder for mod code"],
+        ["build.gradle", "Gradle build script for the project"],
+        ["gradlew build", "Command to compile the mod jar"],
+        ["mixed environment", "Both client and server run this class"],
+        ["modLoadingContext", "Object providing loading state info"]
+      ]},
+      { title: "Creative Tabs", icon: "🗃️", tier: "basic", facts: [
+        ["CreativeModeTab", "Represents a tab in the creative inventory"],
+        ["CREATIVE_MODE_TABS", "DeferredRegister for creative tabs"],
+        [".register(\"id\")", "Registers a new creative tab"],
+        [".title(Component)", "Sets tab display name"],
+        [".icon(Supplier)", "Sets the tab's icon item"],
+        [".displayItems(...)", "Populates items shown in a tab"],
+        ["BuildCreativeModeTabContentsEvent", "Event to add items to vanilla tabs"],
+        ["output.accept(item)", "Adds an item into tab display output"],
+        ["CreativeModeTabs.INGREDIENTS", "Vanilla ingredients tab reference"],
+        [".withTabsBefore()", "Positions tab before another tab"],
+        [".backgroundTexture()", "Sets a custom tab background image"],
+        ["TabVisibility", "Controls where tab items appear"],
+        [".alignedRight()", "Aligns the tab icon to the right"],
+        ["hasPermissions()", "Checks op-only tab visibility"],
+        ["ItemDisplayParameters", "Context object passed to displayItems"]
+      ]},
+      { title: "Item Properties", icon: "⚔️", tier: "basic", facts: [
+        [".food(FoodProperties)", "Attaches eating behavior to an item"],
+        ["FoodProperties.Builder", "Builder class for food stats"],
+        [".nutrition(4)", "Sets hunger points restored"],
+        [".saturationMod(0.3f)", "Sets saturation modifier value"],
+        [".alwaysEdible()", "Allows eating at full hunger"],
+        [".rarity(Rarity.EPIC)", "Sets rarity color of an item"],
+        [".fireResistant()", "Item survives fire and lava"],
+        ["Tiers.DIAMOND", "Vanilla diamond tool tier constant"],
+        [".durability(1561)", "Sets max item durability"],
+        [".attributes()", "Sets tool attack damage/speed"],
+        ["Enchantable component", "Marks item as enchantable"],
+        [".setNoRepair()", "Disables anvil repairing for item"],
+        ["UseAnim.EAT", "Animation used while eating"],
+        [".component()", "Attaches a data component to item"],
+        ["DataComponents.FOOD", "Vanilla food data component key"]
+      ]},
+      { title: "Crafting Recipes", icon: "📜", tier: "basic", facts: [
+        ["Shaped Recipe", "Recipe requiring a specific item pattern"],
+        ["Shapeless Recipe", "Recipe ignoring ingredient placement"],
+        ["RecipeProvider", "Datagen class that writes recipe JSON"],
+        [".pattern(...)", "Defines a shaped recipe grid"],
+        [".define('X', item)", "Maps a pattern key to an item"],
+        [".unlockedBy()", "Sets the advancement unlocking the recipe"],
+        ["RecipeCategory", "Groups recipes in the recipe book"],
+        ["SmeltingRecipeBuilder", "Builder for furnace-style recipes"],
+        [".cookingTime(200)", "Sets smelting duration in ticks"],
+        ["Ingredient.of()", "Creates an ingredient from items/tags"],
+        ["recipe/ folder", "Datapack folder holding recipe JSON"],
+        ["RecipeSerializer", "Handles recipe JSON (de)serialization"],
+        ["CraftingBookCategory", "Groups recipe in the crafting book UI"],
+        [".save(output)", "Writes generated recipe to datagen output"],
+        ["NBT result", "Extra data attached to recipe output"]
+      ]},
+      // ===== ADVANCED (8) =====
+      { title: "Loot Tables", icon: "🎲", tier: "advanced", facts: [
+        ["LootTable", "Defines what drops from a block/entity"],
+        ["LootPool", "Group of loot entries with rolls"],
+        ["LootItem.lootTableItem()", "Adds an item entry to a pool"],
+        [".setRolls()", "Sets how many rolls a pool makes"],
+        ["ApplyBonusCount", "Function scaling drops with fortune"],
+        ["LootTableProvider", "Datagen class generating loot tables"],
+        ["loot_tables/blocks/", "Folder for block loot table JSON"],
+        ["SurvivesExplosion", "Condition removing drops in explosions"],
+        ["LootContext", "Context object holding drop conditions"],
+        [".apply(function)", "Adds a modifier function to an entry"],
+        ["AlternativesEntry", "Picks first matching entry from a list"],
+        ["EntityLootSubProvider", "Base class for entity loot tables"],
+        [".when(condition)", "Adds a condition to a loot entry"],
+        ["SetItemCountFunction", "Randomizes dropped item count"],
+        ["LootTables.EMPTY", "Reference to an empty loot table"]
+      ]},
+      { title: "Data Generation", icon: "🛠️", tier: "advanced", facts: [
+        ["DataGenerator", "Tool generating JSON assets at build time"],
+        ["GatherDataEvent", "Event used to register datagen providers"],
+        ["ExistingFileHelper", "Validates references to existing assets"],
+        ["BlockStateProvider", "Generates blockstate and model JSON"],
+        ["ItemModelProvider", "Generates item model JSON"],
+        ["LanguageProvider", "Generates translation lang JSON"],
+        ["TagsProvider", "Base class for generating tag JSON"],
+        ["RecipeProvider", "Generates crafting recipe JSON"],
+        ["runData task", "Gradle command that runs all datagen providers"],
+        [".withExistingParent()", "Extends an existing model file"],
+        ["simpleBlockItem()", "Generates a basic item model for a block"],
+        ["addTag(TagKey)", "Adds an entry to a generated tag"],
+        ["add(key, value)", "Registers a translation string"],
+        ["DataProvider", "Interface all datagen providers implement"],
+        ["getOutputFolder()", "Path where datagen writes files"]
+      ]},
+      { title: "Capabilities", icon: "🔋", tier: "advanced", facts: [
+        ["Capability<T>", "Interface exposing optional object features"],
+        ["IItemHandler", "Capability interface for item storage"],
+        ["ItemStackHandler", "Default implementation of an item inventory"],
+        ["RegisterCapabilitiesEvent", "Event used to register capabilities"],
+        [".registerItem()", "Registers a capability for item stacks"],
+        [".getCapability()", "Retrieves a capability from an object"],
+        ["EnergyStorage", "Default implementation for energy capability"],
+        ["IEnergyStorage", "Capability interface for stored energy"],
+        ["AttachCapabilitiesEvent", "Legacy event attaching capabilities to objects"],
+        ["LazyOptional", "Old wrapper for optional capability values"],
+        ["ICapabilityProvider", "Interface exposing capabilities on an object"],
+        ["BlockCapability", "Capability type queried on block entities"],
+        ["invalidate()", "Marks a capability reference as stale"],
+        ["ItemHandler.BLOCK", "Vanilla block item handler capability key"],
+        ["side context", "Direction parameter passed to capability lookups"]
+      ]},
+      { title: "Networking Packets", icon: "📡", tier: "advanced", facts: [
+        ["CustomPacketPayload", "Interface for a custom network packet"],
+        ["PayloadRegistrar", "Registers packet types and handlers"],
+        ["RegisterPayloadHandlersEvent", "Event used to register packet payloads"],
+        [".playToServer()", "Registers a client-to-server packet"],
+        [".playToClient()", "Registers a server-to-client packet"],
+        ["StreamCodec", "Defines how a packet is (de)serialized"],
+        ["PacketDistributor", "Utility for sending packets to targets"],
+        [".sendToServer()", "Sends a packet from client to server"],
+        [".sendToPlayer()", "Sends a packet to one player"],
+        ["IPayloadHandler", "Interface handling a received packet"],
+        ["Type<T>", "Identifies a packet payload's type/id"],
+        ["FriendlyByteBuf", "Legacy buffer used to write packet data"],
+        ["enqueueWork()", "Runs packet handling on the main thread"],
+        ["handshake channel", "Channel negotiated on login"],
+        ["ClientPacketListener", "Handles packets received by the client"]
+      ]},
+      { title: "Tags", icon: "🏷️", tier: "advanced", facts: [
+        ["TagKey<T>", "Typed reference to a registry tag"],
+        ["#minecraft:planks", "Vanilla tag referencing all plank blocks"],
+        ["tags/ folder", "Folder holding tag JSON files"],
+        ["\"replace\": false", "Merges with existing tag instead of overwriting"],
+        ["ItemTags", "Class holding common vanilla item tags"],
+        ["BlockTags", "Class holding common vanilla block tags"],
+        [".is(TagKey)", "Checks if a stack/block matches a tag"],
+        ["TagsProvider", "Datagen base class for writing tags"],
+        ["Ingredient.of(tag)", "Creates a recipe ingredient from a tag"],
+        ["optional entry", "Entry ignored if the target doesn't exist"],
+        ["common tags", "Cross-mod convention tags like 'ingots'"],
+        ["EntityTypeTags", "Class holding common entity type tags"],
+        ["FluidTags", "Class holding common vanilla fluid tags"],
+        ["tag inheritance", "Tags can include other tags as entries"],
+        ["#c: prefix", "Common convention namespace for shared tags"]
+      ]},
+      { title: "World Generation", icon: "🌍", tier: "advanced", facts: [
+        ["BiomeModifications", "API for adding features to biomes"],
+        ["ConfiguredFeature", "Defines a placeable world generation feature"],
+        ["PlacedFeature", "Adds placement rules to a configured feature"],
+        ["RegisterEvent", "Where custom features get registered"],
+        ["StructureType", "Defines a custom generated structure"],
+        ["OreConfiguration", "Config for vein-style ore generation"],
+        ["worldgen/ folder", "Holds JSON world generation files"],
+        ["BiomeGenerationSettings", "Lists features generated in a biome"],
+        ["VegetationPlacements", "Vanilla category for plant-like features"],
+        ["GenerationStep.Decoration", "Adds a feature to a generation step"],
+        ["NoiseGeneratorSettings", "Controls terrain shape and noise"],
+        ["Structure.generate()", "Generates a structure at a location"],
+        ["TagKey<Biome>", "Used to target groups of biomes"],
+        ["HeightProvider", "Determines vertical placement range"],
+        ["CountPlacement", "Placement modifier controlling feature count"]
+      ]},
+      { title: "Client Rendering", icon: "🎨", tier: "advanced", facts: [
+        ["BlockEntityRenderer", "Renders custom visuals for a block entity"],
+        ["EntityRenderer", "Defines how an entity is drawn"],
+        ["RegisterRenderers", "Event that registers custom renderer classes"],
+        ["ItemModelProvider", "Generates JSON models for items"],
+        ["PoseStack", "Tracks transformation matrices during rendering"],
+        ["VertexConsumer", "Interface used to submit render vertices"],
+        ["RenderType", "Defines a rendering pipeline configuration"],
+        ["BakedModel", "Compiled model used for fast rendering"],
+        ["RegisterAdditional", "Registers extra models to load"],
+        ["TextureAtlasSprite", "A texture region within an atlas"],
+        [".withExistingParent()", "Extends an existing base model"],
+        ["GuiGraphics", "Utility object for drawing 2D UI"],
+        ["renderTooltip()", "Draws an item's tooltip on screen"],
+        ["LivingEntityRenderer", "Base renderer for humanoid-like entities"],
+        ["IClientItemExtensions", "Interface exposing client-only render hooks"]
+      ]},
+      { title: "Config Files", icon: "⚙️", tier: "advanced", facts: [
+        ["ModConfigSpec", "Builder describing a mod's config options"],
+        ["ModConfigSpec.Builder", "Fluent builder for config values"],
+        [".comment(\"text\")", "Adds a comment above a config entry"],
+        [".defineInRange()", "Defines a numeric value with min/max"],
+        ["ModConfigEvent", "Fired when a config file is (re)loaded"],
+        ["Type.COMMON", "Config synced but not client/server specific"],
+        ["Type.CLIENT", "Config loaded only on the client"],
+        ["Type.SERVER", "Config loaded per running server"],
+        [".define(path, default)", "Defines a config value with a default"],
+        [".push(\"category\")", "Starts a nested config category"],
+        [".pop()", "Closes the current config category"],
+        ["config/ folder", "Where generated .toml config files live"],
+        ["ModConfigRegistry", "API used to register configs"],
+        ["registerConfig()", "Registers a config spec with the mod"],
+        ["reload on change", "Configs can reload without a restart"]
+      ]}
+    ];
+
+    // --- QUESTION BANK GENERATOR: expands 15 facts into 60 questions (4 variants each) ---
+    function shuffled(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function pickDistractors(facts, excludeIdx, count) {
+      const pool = facts.map((f, i) => i).filter(i => i !== excludeIdx);
+      return shuffled(pool).slice(0, count).map(i => facts[i]);
+    }
+
+    function generateLessonBank(topic, lessonNum) {
+      const facts = topic.facts;
+      const bank = [];
+
+      facts.forEach((fact, idx) => {
+        const [term, def] = fact;
+        const distractors = pickDistractors(facts, idx, 2);
+
+        // Variant 1: MC forward - given term, pick definition (random 4-6 total options)
+        const mcDistractors1 = pickDistractors(facts, idx, 3 + Math.floor(Math.random() * 3));
+        bank.push({
+          type: 'mc',
+          title: `Lesson ${lessonNum}: ${topic.title}`,
+          desc: `What does \`${term}\` refer to?`,
+          options: shuffled([def, ...mcDistractors1.map(d => d[1])]),
+          get correct() { return this.options.indexOf(def); },
+          hint: `This relates to ${topic.title.toLowerCase()} in NeoForge modding.`
+        });
+
+        // Variant 2: MC reverse - given definition, pick term (random 4-6 total options)
+        const mcDistractors2 = pickDistractors(facts, idx, 3 + Math.floor(Math.random() * 3));
+        bank.push({
+          type: 'mc',
+          title: `Lesson ${lessonNum}: ${topic.title}`,
+          desc: `Which term matches: "${def}"?`,
+          options: shuffled([term, ...mcDistractors2.map(d => d[0])]),
+          get correct() { return this.options.indexOf(term); },
+          hint: `Think about ${topic.title.toLowerCase()} vocabulary.`
+        });
+
+        // Variant 3: card_input - type/select the term
+        bank.push({
+          type: 'card_input',
+          title: `Lesson ${lessonNum}: ${topic.title}`,
+          icon: topic.icon,
+          desc: `Select the term for: "${def}"`,
+          chips: shuffled([term, distractors[0][0], distractors[1][0]]),
+          answer: term,
+          hint: `Structure: NeoForge identifier e.g. <code>${term}</code>`
+        });
+
+        // Variant 4: card_input - select the definition
+        bank.push({
+          type: 'card_input',
+          title: `Lesson ${lessonNum}: ${topic.title}`,
+          icon: topic.icon,
+          desc: `Select the definition of \`${term}\``,
+          chips: shuffled([def, distractors[0][1], distractors[1][1]]),
+          answer: def,
+          hint: `Recall what ${term} is used for.`
+        });
+      });
+
+      return bank;
+    }
+
+    // Fix up 'correct' getter into a plain resolved index (data is static once shuffled, no need to keep it dynamic)
+    function finalizeBank(bank) {
+      return bank.map(q => {
+        if (q.type === 'mc') {
+          const correctIdx = q.correct; // triggers getter once
+          return { ...q, correct: correctIdx };
+        }
+        return q;
+      });
+    }
+
+    const LESSON_BANKS = LESSON_TOPICS.map((topic, i) => finalizeBank(generateLessonBank(topic, i + 1)));
+    const QUESTIONS_PER_SESSION = 12;
+    const CHUNK_SIZE = 15; // 60 questions = 4 chunks of 15
+
+    // Returns the currently "in use" questions for a lesson (45 or 60 of its 60-question bank).
+    // Every 2 completions of a lesson, a different chunk of 15 rotates out and the
+    // previously-retired chunk rotates back in, so the active set keeps refreshing.
+    function getActivePool(lessonIdx) {
+      const bank = LESSON_BANKS[lessonIdx];
+      const completions = (userData.lessonCompletions && userData.lessonCompletions[lessonIdx]) || 0;
+      const chunks = [];
+      for (let c = 0; c < bank.length / CHUNK_SIZE; c++) {
+        chunks.push(bank.slice(c * CHUNK_SIZE, (c + 1) * CHUNK_SIZE));
+      }
+      if (completions < 2) return bank; // full 60 available before first rotation
+      const retiredChunk = (Math.floor(completions / 2) - 1) % chunks.length;
+      return chunks.filter((_, ci) => ci !== retiredChunk).flat();
+    }
+
+    // --- CHAPTER/LESSON STRUCTURE (16 lessons: 8 Basic + 8 Advanced) ---
+    const OFFSET_CYCLE = ["offset-center", "offset-right-1", "offset-right-2", "offset-right-1", "offset-center", "offset-left-1", "offset-left-2", "offset-left-1"];
+    const lessonsData = LESSON_TOPICS.map((topic, i) => ({
+      id: i + 1,
+      title: `Lesson ${i + 1}: ${topic.title} (${topic.tier === 'basic' ? 'Basic' : 'Advanced'})`,
+      tier: topic.tier,
+      offsetClass: OFFSET_CYCLE[i % OFFSET_CYCLE.length]
+    }));
+
+    // USER SAVED PROGRESS SYSTEM
+    let userData = {
+      unlockedLesson: 0,
+      lessonCompletions: new Array(lessonsData.length).fill(0)
+    };
+
+    function loadUserData() {
+      const saved = localStorage.getItem('neoforge_academy_user_v5');
+      if (saved) {
+        userData = JSON.parse(saved);
+        if (!Array.isArray(userData.lessonCompletions) || userData.lessonCompletions.length !== lessonsData.length) {
+          userData.lessonCompletions = new Array(lessonsData.length).fill(0);
+        }
+      } else {
+        saveUserData();
+      }
+    }
+
+    function saveUserData() {
+      localStorage.setItem('neoforge_academy_user_v5', JSON.stringify(userData));
+    }
+
+    function resetProgress() {
+      userData = { unlockedLesson: 0, lessonCompletions: new Array(lessonsData.length).fill(0) };
+      saveUserData();
+      renderPath();
+    }
+
+    // STATE VARIABLES
+    let selectedLessonIndex = null;
+    let activeLessonIndex = null; // tracks the lesson currently being played, unaffected by bubble-close clicks
+    let activeMascotKind = 'villager'; // which mascot is currently shown for the active question
+    let activeSessionQuestions = [];
+    let currentQuestionIndex = 0;
+    let userBuilderAnswer = [];
+    let selectedMcOption = null;
+    let selectedCardChip = null;
+
+    // RENDER PATH NODES WITH ONE-BY-ONE UNLOCK SYSTEM
+    const pathContainer = document.getElementById('path-container');
+
+    function renderPath() {
+      pathContainer.querySelectorAll('.node-wrapper, .chapter-divider').forEach(n => n.remove());
+      
+      let bubble = document.getElementById('popup-bubble');
+      if (!bubble) {
+        bubble = document.createElement('div');
+        bubble.className = 'popup-bubble';
+        bubble.id = 'popup-bubble';
+        bubble.innerHTML = `
+          <div id="bubble-title" style="color:var(--mc-text-gold); font-family:'Press Start 2P'; font-size:10px;">Lesson</div>
+          <button class="mc-btn-green" id="bubble-start-btn" onclick="startLesson()">START</button>
+        `;
+        pathContainer.appendChild(bubble);
+      }
+
+      lessonsData.forEach((lesson, idx) => {
+        // Drop in a chapter divider the moment the tier switches from basic to advanced
+        if (idx > 0 && lesson.tier !== lessonsData[idx - 1].tier) {
+          const divider = document.createElement('div');
+          divider.className = 'chapter-divider';
+          divider.innerText = 'CHAPTER 2: ADVANCED';
+          pathContainer.appendChild(divider);
+        }
+
+        const wrapper = document.createElement('div');
+        const isUnlocked = idx <= userData.unlockedLesson;
+        
+        wrapper.className = `node-wrapper ${lesson.offsetClass} ${isUnlocked ? '' : 'locked'}`;
+        wrapper.id = `node-${idx}`;
+        
+        const canvas = document.createElement('canvas');
+        canvas.className = 'sprite-canvas';
+        
+        const numBadge = document.createElement('div');
+        numBadge.className = 'node-number';
+        numBadge.innerText = idx + 1;
+        wrapper.appendChild(numBadge);
+
+        drawSprite(canvas, 'default');
+        
+        if (isUnlocked) {
+          wrapper.onmouseenter = () => { if (selectedLessonIndex !== idx) drawSprite(canvas, 'hover'); };
+          wrapper.onmouseleave = () => { if (selectedLessonIndex !== idx) drawSprite(canvas, 'default'); };
+          wrapper.onclick = (e) => {
+            e.stopPropagation();
+            showBubble(wrapper, canvas, idx);
+          };
+        }
+
+        wrapper.appendChild(canvas);
+        pathContainer.appendChild(wrapper);
+      });
+
+      setTimeout(drawConnectingLines, 50);
+    }
+
+    // SVG CONNECTING LINES
+    function drawConnectingLines() {
+      const svg = document.getElementById('path-svg');
+      svg.innerHTML = '';
+
+      for (let i = 0; i < lessonsData.length - 1; i++) {
+        const nodeA = document.getElementById(`node-${i}`);
+        const nodeB = document.getElementById(`node-${i + 1}`);
+
+        if (nodeA && nodeB) {
+          const rectA = nodeA.getBoundingClientRect();
+          const rectB = nodeB.getBoundingClientRect();
+          const containerRect = pathContainer.getBoundingClientRect();
+
+          const x1 = (rectA.left + rectA.width / 2) - containerRect.left;
+          const y1 = (rectA.top + rectA.height / 2) - containerRect.top;
+          const x2 = (rectB.left + rectB.width / 2) - containerRect.left;
+          const y2 = (rectB.top + rectB.height / 2) - containerRect.top;
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', x1);
+          line.setAttribute('y1', y1);
+          line.setAttribute('x2', x2);
+          line.setAttribute('y2', y2);
+          line.setAttribute('stroke-width', '6');
+          line.setAttribute('stroke-dasharray', '6, 6');
+          line.setAttribute('stroke', i < userData.unlockedLesson ? '#58cc02' : '#444444');
+
+          svg.appendChild(line);
+        }
+      }
+    }
+
+    window.addEventListener('resize', drawConnectingLines);
+
+    function showBubble(nodeElement, canvasElement, index) {
+      selectedLessonIndex = index;
+      const bubble = document.getElementById('popup-bubble');
+      
+      document.querySelectorAll('.sprite-canvas').forEach(c => drawSprite(c, 'default'));
+      drawSprite(canvasElement, 'clicked');
+      
+      nodeElement.appendChild(bubble);
+      document.getElementById('bubble-title').innerText = lessonsData[index].title;
+      bubble.style.display = 'flex';
+    }
+
+    document.addEventListener('click', () => {
+      const bubble = document.getElementById('popup-bubble');
+      if (bubble) bubble.style.display = 'none';
+      selectedLessonIndex = null;
+      document.querySelectorAll('.sprite-canvas').forEach(c => drawSprite(c, 'default'));
+    });
+
+    // --- LESSON ENGINE ---
+    function startLesson() {
+      playSound(startLessonSound);
+      const lessonIdx = selectedLessonIndex !== null ? selectedLessonIndex : 0;
+      activeLessonIndex = lessonIdx;
+      const pool = getActivePool(lessonIdx);
+      activeSessionQuestions = shuffled(pool).slice(0, QUESTIONS_PER_SESSION);
+      currentQuestionIndex = 0;
+      
+      document.getElementById('lesson-modal').style.display = 'flex';
+      renderQuestion();
+    }
+
+    function closeLesson() {
+      document.getElementById('lesson-modal').style.display = 'none';
+      activeLessonIndex = null;
+      resetFeedbackUI();
+    }
+
+    function toggleHint() {
+      const hintBox = document.getElementById('question-hint-box');
+      if (hintBox) {
+        if (hintBox.style.display === 'none' || hintBox.style.display === '') {
+          hintBox.style.display = 'block';
+        } else {
+          hintBox.style.display = 'none';
+        }
+      }
+    }
+
+    function moveChipWithAnimation(chip, targetContainer, isReturning, placeholder) {
+      const firstRect = chip.getBoundingClientRect();
+
+      if (isReturning) {
+        chip.classList.remove('selected-blue');
+        targetContainer.insertBefore(chip, placeholder);
+        placeholder.remove();
+      } else {
+        chip.classList.add('selected-blue');
+        targetContainer.appendChild(chip);
+      }
+
+      const lastRect = chip.getBoundingClientRect();
+
+      const deltaX = firstRect.left - lastRect.left;
+      const deltaY = firstRect.top - lastRect.top;
+
+      chip.style.transition = 'none';
+      chip.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+      requestAnimationFrame(() => {
+        chip.style.transition = 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.15s, border-color 0.15s';
+        chip.style.transform = 'translate(0, 0)';
+      });
+    }
+
+    function renderQuestion() {
+      resetFeedbackUI();
+      
+      const progressPercent = (currentQuestionIndex / activeSessionQuestions.length) * 100;
+      document.getElementById('lesson-progress').style.width = `${progressPercent}%`;
+
+      const q = activeSessionQuestions[currentQuestionIndex];
+      const body = document.getElementById('exercise-body');
+      body.innerHTML = '';
+
+      // MASCOT - one of villager/creeper randomly watches over this question
+      const mascotRow = document.createElement('div');
+      mascotRow.className = 'mascot-row';
+
+      activeMascotKind = Math.random() < 0.5 ? 'villager' : 'creeper';
+      const mascotCanvas = document.createElement('canvas');
+      mascotCanvas.className = 'mascot-canvas';
+      mascotCanvas.id = 'mascot-active';
+
+      mascotRow.appendChild(mascotCanvas);
+      body.appendChild(mascotRow);
+
+      drawMascot(mascotCanvas, activeMascotKind, 'default');
+
+      const title = document.createElement('h3');
+      title.style.color = 'var(--mc-text-gold)';
+      title.style.fontSize = '24px';
+      title.style.margin = '0';
+      title.innerText = q.title;
+
+      const desc = document.createElement('p');
+      desc.style.fontSize = '20px';
+      desc.style.margin = '0 0 10px 0';
+      desc.innerText = q.desc;
+
+      body.appendChild(title);
+      body.appendChild(desc);
+
+      // STRUCTURE HINT BOX INJECTION
+      if (q.hint) {
+        const hintBox = document.createElement('div');
+        hintBox.className = 'hint-box';
+        hintBox.id = 'question-hint-box';
+        hintBox.innerHTML = `<strong>STRUCTURE:</strong> ${q.hint}`;
+        body.appendChild(hintBox);
+      }
+
+      // EXERCISE TYPE 1: WORD BANK BUILDER (WITH PREFILLED GUIDANCE FOR EARLY LESSONS)
+      if (q.type === 'builder') {
+        userBuilderAnswer = [];
+        
+        const answerLine = document.createElement('div');
+        answerLine.className = 'answer-line-area';
+        answerLine.id = 'answer-line';
+
+        // Add prefilled static code blocks if provided in guided mode
+        if (q.prefilled && q.prefilled.length > 0) {
+          q.prefilled.forEach(pfWord => {
+            const staticChip = document.createElement('div');
+            staticChip.className = 'static-chip';
+            staticChip.innerText = pfWord;
+            answerLine.appendChild(staticChip);
+          });
+        }
+
+        const bankArea = document.createElement('div');
+        bankArea.className = 'word-bank-area';
+
+        // Combine missing words to place and distractor choices (~5 total in bank)
+        const bankChoices = [...q.missingWords, ...(q.distractors || [])];
+        const shuffledChoices = bankChoices.sort(() => 0.5 - Math.random());
+
+        shuffledChoices.forEach((word) => {
+          const chip = document.createElement('div');
+          chip.className = 'chip-btn';
+          chip.innerText = word;
+          chip.dataset.word = word;
+          
+          chip.onclick = () => {
+            if (chip.parentNode === bankArea) {
+              const placeholder = document.createElement('div');
+              placeholder.className = 'chip-btn chip-placeholder';
+              placeholder.innerText = word;
+              bankArea.insertBefore(placeholder, chip);
+              chip._placeholder = placeholder;
+
+              userBuilderAnswer.push(chip);
+              moveChipWithAnimation(chip, answerLine, false, null);
+            } else {
+              const idx = userBuilderAnswer.indexOf(chip);
+              if (idx !== -1) userBuilderAnswer.splice(idx, 1);
+              
+              moveChipWithAnimation(chip, bankArea, true, chip._placeholder);
+            }
+          };
+          bankArea.appendChild(chip);
+        });
+
+        body.appendChild(answerLine);
+        body.appendChild(bankArea);
+      }
+      
+      // EXERCISE TYPE 2: CARD + ANSWER SLOT (tap an option and it slides into the blank, Duolingo-style)
+      else if (q.type === 'card_input') {
+        selectedCardChip = null;
+
+        const card = document.createElement('div');
+        card.className = 'card-prompt';
+        card.innerHTML = `<div class="card-icon">${q.icon}</div>`;
+
+        const slot = document.createElement('div');
+        slot.className = 'card-answer-slot';
+        slot.id = 'card-answer-slot';
+
+        const placeholderText = document.createElement('span');
+        placeholderText.className = 'slot-placeholder-text';
+        placeholderText.innerText = 'Tap an answer below...';
+        slot.appendChild(placeholderText);
+
+        const chipsContainer = document.createElement('div');
+        chipsContainer.className = 'card-options-list';
+
+        q.chips.forEach(chipText => {
+          const chip = document.createElement('div');
+          chip.className = 'chip-btn chip-btn-wide';
+          chip.innerText = chipText;
+          chip.dataset.word = chipText;
+
+          chip.onclick = () => {
+            if (chip.parentNode === chipsContainer) {
+              // If another answer is already sitting in the slot, send it back first
+              if (selectedCardChip && selectedCardChip !== chip) {
+                moveChipWithAnimation(selectedCardChip, chipsContainer, true, selectedCardChip._placeholder);
+              }
+
+              // Leave a same-sized placeholder behind so the list doesn't jump
+              const gap = document.createElement('div');
+              gap.className = 'chip-btn chip-btn-wide chip-placeholder';
+              gap.innerText = chipText;
+              chipsContainer.insertBefore(gap, chip);
+              chip._placeholder = gap;
+
+              const emptyText = slot.querySelector('.slot-placeholder-text');
+              if (emptyText) emptyText.remove();
+
+              selectedCardChip = chip;
+              moveChipWithAnimation(chip, slot, false, null);
+            } else {
+              // Tapping the answer already in the slot sends it back to the list
+              selectedCardChip = null;
+              moveChipWithAnimation(chip, chipsContainer, true, chip._placeholder);
+              if (!slot.querySelector('.chip-btn')) {
+                slot.appendChild(placeholderText);
+              }
+            }
+          };
+          chipsContainer.appendChild(chip);
+        });
+
+        card.appendChild(slot);
+        body.appendChild(card);
+        body.appendChild(chipsContainer);
+      }
+
+      // EXERCISE TYPE 3: MULTIPLE CHOICE (tap a chip, like the word-bank chips)
+      else if (q.type === 'mc') {
+        selectedMcOption = null;
+        const wrap = document.createElement('div');
+        wrap.className = 'mc-options-wrap';
+
+        q.options.forEach((optText, i) => {
+          const chip = document.createElement('div');
+          chip.className = 'mc-chip';
+          chip.innerText = optText;
+          chip.onclick = () => {
+            selectedMcOption = i;
+            document.querySelectorAll('.mc-chip').forEach(c => c.classList.remove('selected'));
+            chip.classList.add('selected');
+          };
+          wrap.appendChild(chip);
+        });
+
+        body.appendChild(wrap);
+      }
+    }
+
+    // CHECK ANSWER & PROGRESS UNLOCK SYSTEM
+    function checkAnswer() {
+      const actionBtn = document.getElementById('action-btn');
+      const feedback = document.getElementById('feedback-msg');
+
+      if (actionBtn.innerText === 'CONTINUE') {
+        currentQuestionIndex++;
+        if (currentQuestionIndex >= activeSessionQuestions.length) {
+          // Track completion count for this lesson (drives the 60-question pool rotation)
+          if (activeLessonIndex !== null) {
+            userData.lessonCompletions[activeLessonIndex] = (userData.lessonCompletions[activeLessonIndex] || 0) + 1;
+          }
+          // Unlock the next lesson if current completed lesson was highest unlocked
+          if (activeLessonIndex === userData.unlockedLesson && userData.unlockedLesson < lessonsData.length - 1) {
+            userData.unlockedLesson++;
+          }
+          saveUserData();
+          activeLessonIndex = null;
+          closeLesson();
+          renderPath();
+        } else {
+          renderQuestion();
+        }
+        return;
+      }
+
+      const q = activeSessionQuestions[currentQuestionIndex];
+      let isCorrect = false;
+
+      if (q.type === 'builder') {
+        const userStr = userBuilderAnswer.map(chip => chip.dataset.word).join(' ');
+        const targetStr = q.missingWords.join(' ');
+        isCorrect = (userStr === targetStr);
+      } else if (q.type === 'card_input') {
+        const val = selectedCardChip ? selectedCardChip.dataset.word.trim() : '';
+        isCorrect = (val.toLowerCase() === q.answer.toLowerCase());
+      } else if (q.type === 'mc') {
+        isCorrect = (selectedMcOption === q.correct);
+      }
+
+      if (isCorrect) {
+        playSound(correctSound);
+        document.documentElement.style.setProperty('--bg-tint', 'rgba(88, 204, 2, 0.2)');
+        actionBtn.classList.add('correct-btn');
+        feedback.style.color = '#58cc02';
+        feedback.innerText = '✔ EXCELLENT!';
+        reactMascot();
+      } else {
+        playSound(wrongSound);
+        document.documentElement.style.setProperty('--bg-tint', 'rgba(255, 75, 75, 0.2)');
+        actionBtn.classList.add('wrong-btn');
+        feedback.style.color = '#ff4b4b';
+        feedback.innerText = '❌ INCORRECT!';
+        document.getElementById('show-answer-btn').style.display = 'inline-block';
+      }
+
+      actionBtn.innerText = 'CONTINUE';
+    }
+
+    // REVEAL THE CORRECT ANSWER FOR THE CURRENT QUESTION
+    function showAnswer() {
+      const q = activeSessionQuestions[currentQuestionIndex];
+      let answerText = '';
+
+      if (q.type === 'builder') {
+        answerText = q.missingWords.join(' ');
+      } else if (q.type === 'card_input') {
+        answerText = q.answer;
+        document.querySelectorAll('#card-answer-slot .chip-btn, .card-options-list .chip-btn').forEach(chip => {
+          if (chip.dataset.word && chip.dataset.word.toLowerCase() === q.answer.toLowerCase()) {
+            chip.classList.add('correct-reveal');
+          }
+        });
+      } else if (q.type === 'mc') {
+        answerText = q.options[q.correct];
+        document.querySelectorAll('.mc-chip').forEach((chip, i) => {
+          if (i === q.correct) chip.classList.add('correct-reveal');
+        });
+      }
+
+      const reveal = document.getElementById('answer-reveal');
+      reveal.innerText = '✔ ANSWER: ' + answerText;
+      reveal.style.display = 'block';
+    }
+
+    // MASCOT REACTION - the currently-displayed character pops into its reaction pose
+    function reactMascot() {
+      const canvas = document.getElementById('mascot-active');
+      if (!canvas) return;
+      drawMascot(canvas, activeMascotKind, 'alt');
+      canvas.classList.add('reacting');
+      setTimeout(() => canvas.classList.remove('reacting'), 600);
+    }
+
+    function resetFeedbackUI() {
+      document.documentElement.style.setProperty('--bg-tint', 'transparent');
+      const actionBtn = document.getElementById('action-btn');
+      actionBtn.className = 'mc-btn-green';
+      actionBtn.innerText = 'CHECK';
+      document.getElementById('feedback-msg').innerText = '';
+      document.getElementById('show-answer-btn').style.display = 'none';
+      const reveal = document.getElementById('answer-reveal');
+      reveal.style.display = 'none';
+      reveal.innerText = '';
+    }
+
+    // Initialize
+    loadUserData();
+    renderPath();
+  </script>
+</body>
+</html>
